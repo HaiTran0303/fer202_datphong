@@ -11,6 +11,7 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -20,21 +21,84 @@ function Login() {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) {
+      setError('');
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      setError('Vui lòng nhập email');
+      return false;
+    }
+    if (!formData.email.includes('@')) {
+      setError('Email không hợp lệ');
+      return false;
+    }
+    if (!formData.password.trim()) {
+      setError('Vui lòng nhập mật khẩu');
+      return false;
+    }
+    if (formData.password.length < 6) {
+      setError('Mật khẩu phải có ít nhất 6 ký tự');
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       setError('');
       setLoading(true);
       await login(formData.email, formData.password);
+      
+      // Save remember me preference
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+      }
+      
       navigate('/');
     } catch (err) {
-      setError('Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.');
+      console.error('Login error:', err);
+      
+      // More specific error messages
+      let errorMessage = 'Đăng nhập thất bại';
+      
+      if (err.code === 'auth/user-not-found') {
+        errorMessage = 'Email chưa được đăng ký';
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Mật khẩu không đúng';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Email không hợp lệ';
+      } else if (err.code === 'auth/user-disabled') {
+        errorMessage = 'Tài khoản đã bị vô hiệu hóa';
+      } else if (err.code === 'auth/too-many-requests') {
+        errorMessage = 'Quá nhiều lần thử. Vui lòng thử lại sau';
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet';
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
+  };
+
+  const handleSocialLogin = (provider) => {
+    // For demo purposes, show a message
+    setError(`Đăng nhập với ${provider} sẽ được triển khai trong phiên bản tiếp theo`);
+  };
+
+  const handleForgotPassword = () => {
+    // For demo purposes, show a message
+    setError('Tính năng quên mật khẩu sẽ được triển khai trong phiên bản tiếp theo');
   };
 
   return (
@@ -54,8 +118,14 @@ function Login() {
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
               {error}
+              <button
+                onClick={() => setError('')}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
             </div>
           )}
           
@@ -111,6 +181,8 @@ function Login() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
@@ -119,9 +191,13 @@ function Login() {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   Quên mật khẩu?
-                </a>
+                </button>
               </div>
             </div>
 
@@ -129,7 +205,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
@@ -147,11 +223,17 @@ function Login() {
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <button
+                onClick={() => handleSocialLogin('Google')}
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
                 <span className="sr-only">Đăng nhập với Google</span>
                 Google
               </button>
-              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+              <button
+                onClick={() => handleSocialLogin('Facebook')}
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
                 <span className="sr-only">Đăng nhập với Facebook</span>
                 Facebook
               </button>
