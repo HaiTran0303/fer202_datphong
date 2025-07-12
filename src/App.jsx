@@ -10,6 +10,7 @@ import SearchPosts from './pages/SearchPosts';
 import PostDetail from './pages/PostDetail';
 import Suggestions from './pages/Suggestions';
 import Connections from './pages/Connections';
+import FirebaseTest from './test/FirebaseTest';
 import './App.css';
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/post/:id" element={<PostDetail />} />
             <Route path="/suggestions" element={<Suggestions />} />
             <Route path="/connections" element={<Connections />} />
+            <Route path="/firebase-test" element={<FirebaseTest />} />
           </Routes>
         </Layout>
       </Router>
