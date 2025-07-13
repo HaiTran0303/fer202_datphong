@@ -156,14 +156,6 @@ const Layout = ({ children }) => {
                           <Settings className="w-4 h-4 mr-2" />
                           Cài đặt
                         </Link>
-                        <Link
-                          to="/debug"
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setShowUserDropdown(false)}
-                        >
-                          <Settings className="w-4 h-4 mr-2" />
-                          Debug
-                        </Link>
                         <hr className="my-1" />
                         <button
                           onClick={handleLogout}

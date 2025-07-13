@@ -21,13 +21,13 @@ let storage;
 
 try {
   app = initializeApp(firebaseConfig);
-  
+
   // Initialize Firebase Authentication
   auth = getAuth(app);
-  
+
   // Initialize Cloud Firestore
   db = getFirestore(app);
-  
+
   // Initialize Cloud Storage
   storage = getStorage(app);
   
@@ -37,7 +37,7 @@ try {
       connectAuthEmulator(auth, 'http://localhost:9099');
       connectFirestoreEmulator(db, 'localhost', 8080);
       connectStorageEmulator(storage, 'localhost', 9199);
-    } catch (error) {
+  } catch (error) {
       console.warn('Firebase emulator connection failed:', error);
     }
   }

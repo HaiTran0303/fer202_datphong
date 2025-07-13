@@ -120,7 +120,7 @@ function PostDetail() {
       return;
     }
     
-    if (currentUser.uid === post.author.id) {
+    if (currentUser?.uid === post.author?.id) {
       alert('Đây là bài đăng của bạn!');
       return;
     }
@@ -136,7 +136,7 @@ function PostDetail() {
     // Simulate sending message
     setTimeout(() => {
       console.log('Sending message:', {
-        to: post.author.id,
+        to: post.author?.id,
         message: contactMessage,
         postId: post.id
       });
@@ -153,7 +153,13 @@ function PostDetail() {
   };
 
   const formatPrice = (price) => {
-    return (price / 1000000).toFixed(1) + ' triệu';
+    if (price === undefined || price === null) {
+      return 'N/A';
+    }
+    if (price >= 1000000) {
+      return `${(price / 1000000).toFixed(1)} triệu`;
+    }
+    return `${price.toLocaleString()} đồng`;
   };
 
   const formatDate = (dateString) => {
@@ -362,15 +368,15 @@ function PostDetail() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Diện tích:</span>
-                    <span className="font-medium">{post.additionalInfo.area}</span>
+                    <span className="font-medium">{post.additionalInfo?.area || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tầng:</span>
-                    <span className="font-medium">{post.additionalInfo.floor}</span>
+                    <span className="font-medium">{post.additionalInfo?.floor || 'N/A'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Tiền cọc:</span>
-                    <span className="font-medium">{formatPrice(post.additionalInfo.deposit)}</span>
+                    <span className="font-medium">{formatPrice(post.additionalInfo?.deposit || 0)}</span>
                   </div>
                 </div>
               </div>
@@ -398,7 +404,7 @@ function PostDetail() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-3">Tiện ích</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {post.amenities.map(amenity => (
+                {post.amenities?.map(amenity => (
                   <div key={amenity} className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
                     {amenitiesIcons[amenity]}
                     <span className="text-sm">{amenitiesLabels[amenity]}</span>
@@ -411,7 +417,7 @@ function PostDetail() {
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-3">Quy tắc chung</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {post.rules.map((rule, index) => (
+                {post.rules?.map((rule, index) => (
                   <div key={index} className="flex items-center space-x-2">
                     <CheckCircle size={16} className="text-green-500" />
                     <span className="text-sm">{rule}</span>
@@ -424,7 +430,7 @@ function PostDetail() {
             <div>
               <h3 className="text-lg font-semibold mb-3">Địa điểm lân cận</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {post.additionalInfo.nearby.map((place, index) => (
+                {post.additionalInfo?.nearby?.map((place, index) => (
                   <div key={index} className="flex items-center space-x-2">
                     <MapPin size={16} className="text-gray-400" />
                     <span className="text-sm">{place}</span>
@@ -441,19 +447,19 @@ function PostDetail() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center space-x-4 mb-4">
               <img
-                src={post.author.avatar}
-                alt={post.author.name}
+                src={post.author?.avatar || '/default-avatar.png'}
+                alt={post.author?.name || 'Người dùng'}
                 className="w-12 h-12 rounded-full"
               />
               <div>
                 <h3 className="font-semibold text-gray-900 flex items-center">
-                  {post.author.name}
-                  {post.author.verified && (
+                  {post.author?.name || 'Người dùng ẩn danh'}
+                  {post.author?.verified && (
                     <CheckCircle size={16} className="ml-1 text-green-500" />
                   )}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Tham gia từ {formatDate(post.author.joinDate)}
+                  Tham gia từ {formatDate(post.author?.joinDate || new Date())}
                 </p>
               </div>
             </div>
@@ -461,11 +467,11 @@ function PostDetail() {
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tỷ lệ phản hồi:</span>
-                <span className="font-medium">{post.author.responseRate}%</span>
+                <span className="font-medium">{post.author?.responseRate || 'N/A'}%</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Thời gian phản hồi:</span>
-                <span className="font-medium">{post.author.responseTime}</span>
+                <span className="font-medium">{post.author?.responseTime || 'N/A'}</span>
               </div>
             </div>
             
@@ -555,7 +561,7 @@ function PostDetail() {
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tin nhắn cho {post.author.name}
+                Tin nhắn cho {post.author?.name || 'Người dùng'}
               </label>
               <textarea
                 value={contactMessage}
@@ -588,4 +594,4 @@ function PostDetail() {
   );
 }
 
-export default PostDetail; 
+export default PostDetail;

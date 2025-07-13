@@ -12,6 +12,7 @@ import Ratings from './pages/Ratings';
 import MyPosts from './pages/MyPosts';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import EditPost from './pages/EditPost';
 import FirebaseTest from './test/FirebaseTest';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -43,6 +44,7 @@ function App() {
                   <Route path="/my-posts" element={<MyPosts />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/profile" element={<Profile />} />
+                  <Route path="/edit-post/:id" element={<EditPost />} />
                   <Route path="/firebase-test" element={<FirebaseTest />} />
                   
                   {/* Category Routes */}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { postsService } from '../utils/firebase';
 import { 
@@ -19,6 +19,7 @@ import {
 const CreatePost = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { postId } = useParams();
   
   const [formData, setFormData] = useState({
     title: '',
@@ -49,7 +50,27 @@ const CreatePost = () => {
     if (!currentUser) {
       navigate('/login');
     }
-  }, [currentUser, navigate]);
+    // If editing, load post data
+    if (postId) {
+      (async () => {
+        setLoading(true);
+        try {
+          const post = await postsService.getPostById(postId);
+          if (post && post.authorId === currentUser.uid) {
+            setFormData({ ...post });
+          } else {
+            alert('Bạn không có quyền chỉnh sửa bài đăng này.');
+            navigate('/my-posts');
+          }
+        } catch {
+          alert('Không thể tải bài đăng để chỉnh sửa.');
+          navigate('/my-posts');
+        } finally {
+          setLoading(false);
+        }
+      })();
+    }
+  }, [currentUser, navigate, postId]);
 
   // Test function to debug
   const testPost = async () => {
@@ -184,31 +205,32 @@ const CreatePost = () => {
     }
 
     try {
-      const postData = {
-        ...formData,
-        type: 'roommate-search',
-        budget: parseInt(formData.budget),
-        authorId: currentUser.uid,
-        authorName: formData.contactName || currentUser.displayName,
-        authorPhone: formData.contactPhone,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active'
-      };
-
-      console.log('Creating post with data:', postData);
-      
-      const result = await postsService.createPost(postData);
-      console.log('Post created successfully:', result);
-      
-      // Show success message
-      alert('Đăng tin thành công!');
-      
-      // Force reload by using window.location instead of navigate
-      window.location.href = '/';
-    } catch (err) {
-      console.error('Error creating post:', err);
-      setError('Có lỗi xảy ra khi đăng tin: ' + err.message);
+      if (postId) {
+        // Update post
+        await postsService.updatePost(postId, {
+          ...formData,
+          updatedAt: new Date().toISOString(),
+        });
+        alert('Cập nhật bài đăng thành công!');
+      } else {
+        // Create new post
+        const postData = {
+          ...formData,
+          type: 'roommate-search',
+          budget: parseInt(formData.budget),
+          authorId: currentUser.uid,
+          authorName: formData.contactName || currentUser.displayName,
+          authorPhone: formData.contactPhone,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'active'
+        };
+        await postsService.createPost(postData);
+        alert('Đăng bài thành công!');
+      }
+      navigate('/my-posts');
+    } catch {
+      setError('Có lỗi xảy ra khi lưu bài đăng.');
     } finally {
       setLoading(false);
     }

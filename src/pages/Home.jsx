@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { postsService } from '../utils/firebase';
 import PostCard from '../components/PostCard';
 import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
+import { LOCATIONS } from '../utils/constants';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
@@ -13,12 +15,6 @@ const Home = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
   const [totalPosts, setTotalPosts] = useState(0);
-
-  const provinces = [
-    'Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ', 'Bình Dương', 'Đồng Nai', 
-    'Khánh Hòa', 'Hải Phòng', 'Long An', 'Quảng Nam', 'Bà Rịa - Vũng Tàu', 
-    'Đắk Lắk', 'Cà Mau', 'Thừa Thiên Huế', 'Kiên Giang', 'Lâm Đồng'
-  ];
 
   const loadPosts = useCallback(async () => {
     try {
@@ -32,9 +28,41 @@ const Home = () => {
       });
       
       console.log('Posts loaded:', result);
-      setPosts(result.posts || []);
-      setTotalPages(result.totalPages || 1);
-      setTotalPosts(result.total || 0);
+      
+      let filteredPosts = result.posts || [];
+
+      // Client-side filtering for price range
+      if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
+        filteredPosts = filteredPosts.filter(post => 
+          post.price >= filters.priceMin && post.price <= filters.priceMax
+        );
+      } else if (filters.priceMin !== undefined) {
+        filteredPosts = filteredPosts.filter(post => post.price >= filters.priceMin);
+      } else if (filters.priceMax !== undefined) {
+        filteredPosts = filteredPosts.filter(post => post.price <= filters.priceMax);
+      }
+
+      // Client-side filtering for area range
+      if (filters.areaMin !== undefined && filters.areaMax !== undefined) {
+        filteredPosts = filteredPosts.filter(post => 
+          post.area >= filters.areaMin && post.area <= filters.areaMax
+        );
+      } else if (filters.areaMin !== undefined) {
+        filteredPosts = filteredPosts.filter(post => post.area >= filters.areaMin);
+      } else if (filters.areaMax !== undefined) {
+        filteredPosts = filteredPosts.filter(post => post.area <= filters.areaMax);
+      }
+
+      // Client-side filtering for amenities (assuming post.amenities is an array of strings)
+      if (filters.amenities && filters.amenities.length > 0) {
+        filteredPosts = filteredPosts.filter(post => 
+          filters.amenities.every(amenity => post.amenities?.includes(amenity))
+        );
+      }
+
+      setPosts(filteredPosts);
+      setTotalPages(result.totalPages || 1); // Total pages based on initial fetch, not client-side filter
+      setTotalPosts(filteredPosts.length); // Total posts based on client-side filter
     } catch (err) {
       setError('Có lỗi xảy ra khi tải dữ liệu');
       console.error('Error loading posts:', err);
@@ -97,28 +125,24 @@ const Home = () => {
             Hiện có <span className="font-semibold text-orange-500">{(totalPosts || 0).toLocaleString()}</span> tin đăng
           </p>
 
-          {/* Province Filter */}
+          {/* Location Filter */}
           <div className="mb-6">
             <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
-              Tỉnh thành
+              Địa điểm
             </h3>
             <div className="flex overflow-x-auto gap-2 pb-2">
-              {provinces.map((province) => (
+              {LOCATIONS.map((location) => (
                 <button
-                  key={province}
-                  onClick={() => handleFilterChange({ ...filters, location: province })}
-                  className="flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm hover:shadow-md transition-shadow"
+                  key={location}
+                  onClick={() => handleFilterChange({ ...filters, location: location })}
+                  className={`flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm hover:shadow-md transition-shadow ${
+                    filters.location === location ? 'bg-blue-50 border-blue-300 text-blue-600' : ''
+                  }`}
                 >
                   <div className="text-xs text-gray-500">Phòng trọ</div>
-                  <div className="font-medium text-gray-800">{province}</div>
+                  <div className="font-medium text-gray-800">{location}</div>
                 </button>
               ))}
-              <button className="flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm text-blue-600 hover:shadow-md transition-shadow">
-                Tất cả
-                <svg className="w-3 h-3 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
             </div>
           </div>
 
@@ -197,7 +221,9 @@ const Home = () => {
           ) : (
             <div className="space-y-4">
               {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <Link to={`/post/${post.id}`} key={post.id} className="block">
+                  <PostCard post={post} />
+                </Link>
               ))}
             </div>
           )}
@@ -214,59 +240,10 @@ const Home = () => {
           )}
         </div>
 
-        {/* Sidebar */}
+          {/* Sidebar */}
         <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-6">
           {/* Search Filter */}
-          <SearchFilter onFilterChange={handleFilterChange} />
-
-          {/* Price Filter */}
-          <div className="bg-white rounded shadow-sm p-4">
-            <h3 className="font-medium text-gray-800 mb-3">Xem theo khoảng giá</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Dưới 1 triệu', max: 1000000 },
-                { label: 'Từ 1 - 2 triệu', min: 1000000, max: 2000000 },
-                { label: 'Từ 2 - 3 triệu', min: 2000000, max: 3000000 },
-                { label: 'Từ 3 - 5 triệu', min: 3000000, max: 5000000 },
-                { label: 'Từ 5 - 7 triệu', min: 5000000, max: 7000000 },
-                { label: 'Trên 7 triệu', min: 7000000 }
-              ].map((range, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleFilterChange({ 
-                    ...filters, 
-                    priceMin: range.min, 
-                    priceMax: range.max 
-                  })}
-                  className="text-left text-sm text-gray-600 hover:text-gray-800 py-1 transition-colors"
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-
-            <h3 className="font-medium text-gray-800 mb-3 mt-6">Xem theo diện tích</h3>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Dưới 20 m²', max: 20 },
-                { label: 'Từ 20 - 30m²', min: 20, max: 30 },
-                { label: 'Từ 30 - 50m²', min: 30, max: 50 },
-                { label: 'Trên 50m²', min: 50 }
-              ].map((range, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleFilterChange({ 
-                    ...filters, 
-                    areaMin: range.min, 
-                    areaMax: range.max 
-                  })}
-                  className="text-left text-sm text-gray-600 hover:text-gray-800 py-1 transition-colors"
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <SearchFilter onFilterChange={handleFilterChange} initialFilters={filters} />
 
           {/* Recent Posts */}
           <div className="bg-white rounded shadow-sm p-4">
@@ -329,4 +306,4 @@ const Home = () => {
   );
 };
 
-export default Home; 
+export default Home;

@@ -82,7 +82,15 @@ export const postsService = {
       // Use simple query to avoid composite index requirements
       const queryConstraints = [];
       
-      // Only use orderBy and limit to avoid index issues
+      // Apply filters
+      if (options.location) {
+        queryConstraints.push(where('city', '==', options.location)); // Assuming 'city' is the field for location
+      }
+      if (options.category) {
+        queryConstraints.push(where('category', '==', options.category));
+      }
+
+      // Always order by createdAt and limit
       queryConstraints.push(orderBy('createdAt', 'desc'));
       queryConstraints.push(limit(pageSize));
 
@@ -249,7 +257,7 @@ export const postsService = {
       const docRef = doc(db, POSTS_COLLECTION, id);
       await updateDoc(docRef, {
         ...updates,
-        updatedAt: serverTimestamp()
+        updatedAt: updates.updatedAt || serverTimestamp()
       });
     } catch (error) {
       console.error('Error updating post:', error);
@@ -600,4 +608,4 @@ const addMockPost = (postData) => {
   };
   mockPostsStorage.unshift(mockPost); // Add to beginning
   return mockPost.id;
-}; 
+};

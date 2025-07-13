@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Filter, X, MapPin, DollarSign, Home } from 'lucide-react';
-import { LOCATIONS, CATEGORIES, PRICE_RANGES, AREA_RANGES } from '../utils/firebase';
+import { LOCATIONS, CATEGORIES, PRICE_RANGES, AREA_RANGES, AMENITIES_LIST } from '../utils/constants';
 
 function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,12 +15,6 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   });
 
   const [tempFilters, setTempFilters] = useState(filters);
-
-  const amenitiesList = [
-    'Máy lạnh', 'Wifi', 'Giường', 'Tủ quần áo', 'Bàn học', 
-    'Tủ lạnh', 'Máy giặt', 'Bếp', 'Ban công', 'Thang máy',
-    'Sân vườn', 'Bãi đậu xe', 'An ninh 24/7'
-  ];
 
   // Handle search
   const handleSearch = (e) => {
@@ -290,7 +284,7 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
               Tiện ích
             </label>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-              {amenitiesList.map(amenity => (
+              {AMENITIES_LIST.map(amenity => (
                 <label key={amenity} className="flex items-center space-x-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -331,4 +325,4 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   );
 }
 
-export default SearchFilter; 
+export default SearchFilter;

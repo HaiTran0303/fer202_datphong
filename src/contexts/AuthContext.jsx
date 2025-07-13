@@ -21,34 +21,34 @@ export function AuthProvider({ children }) {
   // Đăng ký với email/password
   const register = async (email, password, userData) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Cập nhật profile
-      await updateProfile(result.user, {
-        displayName: userData.fullName
-      });
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    
+    // Cập nhật profile
+    await updateProfile(result.user, {
+      displayName: userData.fullName
+    });
 
-      // Lưu thông tin user vào Firestore
+    // Lưu thông tin user vào Firestore
       if (db) {
-        await setDoc(doc(db, 'users', result.user.uid), {
-          uid: result.user.uid,
-          email: email,
-          fullName: userData.fullName,
-          phone: userData.phone,
-          school: userData.school,
-          major: userData.major,
-          yearOfStudy: userData.yearOfStudy,
-          gender: userData.gender,
-          dateOfBirth: userData.dateOfBirth,
-          avatar: userData.avatar || '',
-          bio: userData.bio || '',
-          isVerified: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+    await setDoc(doc(db, 'users', result.user.uid), {
+      uid: result.user.uid,
+      email: email,
+      fullName: userData.fullName,
+      phone: userData.phone,
+      school: userData.school,
+      major: userData.major,
+      yearOfStudy: userData.yearOfStudy,
+      gender: userData.gender,
+      dateOfBirth: userData.dateOfBirth,
+      avatar: userData.avatar || '',
+      bio: userData.bio || '',
+      isVerified: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
       }
 
-      return result;
+    return result;
     } catch (error) {
       console.error('Registration error:', error);
       
@@ -72,8 +72,8 @@ export function AuthProvider({ children }) {
   // Đăng nhập với email/password
   const login = async (email, password) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result;
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result;
     } catch (error) {
       console.error('Login error:', error);
       
@@ -137,19 +137,19 @@ export function AuthProvider({ children }) {
       setCurrentUser(null);
       setUserProfile(null);
     } else {
-      await signOut(auth);
-      setUserProfile(null);
+    await signOut(auth);
+    setUserProfile(null);
     }
   };
 
   // Lấy thông tin user từ Firestore
   const getUserProfile = useCallback(async (uid) => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        return userDoc.data();
-      }
-      return null;
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (userDoc.exists()) {
+      return userDoc.data();
+    }
+    return null;
     } catch (error) {
       console.error('Error getting user profile:', error);
       return null;
@@ -175,14 +175,14 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       // Don't override currentUser if we have a mock user
       if (!mockUser) {
-        setCurrentUser(user);
-        
-        if (user) {
-          // Lấy thông tin profile từ Firestore
-          const profile = await getUserProfile(user.uid);
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
+      setCurrentUser(user);
+      
+      if (user) {
+        // Lấy thông tin profile từ Firestore
+        const profile = await getUserProfile(user.uid);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
         }
       }
       
