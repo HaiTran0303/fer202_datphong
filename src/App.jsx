@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Ratings from './pages/Ratings';
 import MyPosts from './pages/MyPosts';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import FirebaseTest from './test/FirebaseTest';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/ratings" element={<Ratings />} />
                   <Route path="/my-posts" element={<MyPosts />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/firebase-test" element={<FirebaseTest />} />
                   
                   {/* Category Routes */}
