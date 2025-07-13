@@ -1,213 +1,73 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Loader2, AlertCircle, TrendingUp, Users, Home as HomeIcon, MapPin } from 'lucide-react';
-import { postsService, statsService, LOCATIONS, CATEGORIES } from '../utils/firebase';
-import { seedPosts } from '../utils/seedData';
-import SearchFilter from '../components/SearchFilter';
+import React, { useState, useEffect } from 'react';
+import { postsService } from '../utils/firebase';
 import PostCard from '../components/PostCard';
+import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
 
-function Home() {
+const Home = () => {
   const [posts, setPosts] = useState([]);
-  const [featuredPosts, setFeaturedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [stats, setStats] = useState({});
-  
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastDoc, setLastDoc] = useState(null);
-  const [hasNextPage, setHasNextPage] = useState(false);
-  const [totalPages, setTotalPages] = useState(1);
-  
-  // Search and Filter
-  const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({});
-  const [activeTab, setActiveTab] = useState('all');
-  
-  const pageSize = 6;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [totalPosts, setTotalPosts] = useState(0);
 
-  // Load initial data
+  const provinces = [
+    'Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Cần Thơ', 'Bình Dương', 'Đồng Nai', 
+    'Khánh Hòa', 'Hải Phòng', 'Long An', 'Quảng Nam', 'Bà Rịa - Vũng Tàu', 
+    'Đắk Lắk', 'Cà Mau', 'Thừa Thiên Huế', 'Kiên Giang', 'Lâm Đồng'
+  ];
+
   useEffect(() => {
-    loadInitialData();
-  }, []);
+    loadPosts();
+  }, [filters, currentPage, sortBy]);
 
-  // Load posts when filters change
-  useEffect(() => {
-    if (searchTerm || Object.keys(filters).length > 0) {
-      handleSearch();
-    } else {
-      loadPosts(1);
-    }
-  }, [filters]);
-
-  const loadInitialData = async () => {
+  const loadPosts = async () => {
     try {
       setLoading(true);
+      const result = await postsService.getPosts({
+        ...filters,
+        page: currentPage,
+        limit: 20,
+        sortBy
+      });
       
-      // Load posts and featured posts in parallel
-      const [postsResult, featuredResult, statsResult] = await Promise.all([
-        postsService.getPosts(pageSize),
-        postsService.getFeaturedPosts(3),
-        statsService.getStats().catch(() => ({ totalPosts: 0, totalUsers: 0 }))
-      ]);
-
-      setPosts(postsResult.posts);
-      setLastDoc(postsResult.lastDoc);
-      setHasNextPage(postsResult.hasMore);
-      setTotalPages(Math.ceil(postsResult.posts.length / pageSize));
-      
-      setFeaturedPosts(featuredResult);
-      setStats(statsResult);
-      
-    } catch (error) {
-      console.error('Error loading initial data:', error);
-      
-      // If no data found, offer to seed
-      if (error.message?.includes('No posts found') || posts.length === 0) {
-        setError('no-data');
-      } else {
-        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
-      }
+      setPosts(result.posts);
+      setTotalPages(result.totalPages);
+      setTotalPosts(result.total);
+    } catch (err) {
+      setError('Có lỗi xảy ra khi tải dữ liệu');
+      console.error('Error loading posts:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadPosts = async (page = 1, resetData = true) => {
-    try {
-      setSearchLoading(true);
-      
-      const result = await postsService.getPosts(
-        pageSize,
-        page === 1 ? null : lastDoc,
-        filters
-      );
-
-      if (resetData) {
-        setPosts(result.posts);
-      } else {
-        setPosts(prev => [...prev, ...result.posts]);
-      }
-      
-      setLastDoc(result.lastDoc);
-      setHasNextPage(result.hasMore);
-      setCurrentPage(page);
-      
-    } catch (error) {
-      console.error('Error loading posts:', error);
-      setError('Không thể tải tin đăng. Vui lòng thử lại sau.');
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const handleSearch = async (term = searchTerm) => {
-    try {
-      setSearchLoading(true);
-      setSearchTerm(term);
-      
-      let result;
-      if (term) {
-        result = await postsService.searchPosts(term, filters);
-        setPosts(result);
-        setHasNextPage(false);
-        setCurrentPage(1);
-      } else {
-        result = await postsService.getPosts(pageSize, null, filters);
-        setPosts(result.posts);
-        setLastDoc(result.lastDoc);
-        setHasNextPage(result.hasMore);
-        setCurrentPage(1);
-      }
-      
-    } catch (error) {
-      console.error('Error searching posts:', error);
-      setError('Không thể tìm kiếm. Vui lòng thử lại sau.');
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const handleFilter = (newFilters) => {
+  const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
     setCurrentPage(1);
-    setLastDoc(null);
+  };
+
+  const handleSortChange = (newSort) => {
+    setSortBy(newSort);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
-    loadPosts(page, true);
+    setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handlePostLike = async (postId) => {
-    // Implement like functionality
-    console.log('Liked post:', postId);
-  };
-
-  const handlePostView = async (postId) => {
-    // Implement view tracking
-    console.log('Viewed post:', postId);
-  };
-
-  const handleSeedData = async () => {
-    try {
-      setLoading(true);
-      const success = await seedPosts();
-      if (success) {
-        await loadInitialData();
-        setError(null);
-      }
-    } catch (error) {
-      console.error('Error seeding data:', error);
-      setError('Không thể tạo dữ liệu mẫu. Vui lòng thử lại sau.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Error state
-  if (error === 'no-data') {
+  if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Chưa có dữ liệu
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Hệ thống chưa có tin đăng nào. Bạn có muốn tạo dữ liệu mẫu không?
-          </p>
-          <button
-            onClick={handleSeedData}
-            disabled={loading}
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? (
-              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-            ) : (
-              <Plus className="w-5 h-5 mr-2" />
-            )}
-            Tạo dữ liệu mẫu
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && error !== 'no-data') {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Có lỗi xảy ra
-          </h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={loadInitialData}
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          <div className="text-red-500 text-lg mb-4">Có lỗi xảy ra</div>
+          <button 
+            onClick={loadPosts}
+            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
           >
             Thử lại
           </button>
@@ -218,251 +78,247 @@ function Home() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Kênh thông tin Phòng Trọ số 1 Việt Nam
-        </h1>
-        <p className="text-gray-600">
-          Có {stats.totalPosts || '73,876'} tin đăng cho thuê
-        </p>
-      </div>
+      <div className="flex gap-6">
+        {/* Main Content */}
+        <div className="flex-1">
+          {/* Page Title */}
+          <h1 className="text-xl font-semibold text-gray-900 mb-4">
+            Cho thuê phòng trọ, nhà nguyên căn, căn hộ
+          </h1>
+          <p className="text-sm text-gray-600 mb-6">
+            Hiện có <span className="font-semibold text-orange-500">{totalPosts.toLocaleString()}</span> tin đăng
+          </p>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <HomeIcon className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tin đăng</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalPosts || '200K+'}</p>
+          {/* Province Filter */}
+          <div className="mb-6">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
+              Tỉnh thành
+            </h3>
+            <div className="flex overflow-x-auto gap-2 pb-2">
+              {provinces.map((province) => (
+                <button
+                  key={province}
+                  onClick={() => handleFilterChange({ ...filters, location: province })}
+                  className="flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="text-xs text-gray-500">Phòng trọ</div>
+                  <div className="font-medium text-gray-800">{province}</div>
+                </button>
+              ))}
+              <button className="flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm text-blue-600 hover:shadow-md transition-shadow">
+                Tất cả
+                <svg className="w-3 h-3 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Người dùng</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalUsers || '130K+'}</p>
+
+          {/* Sort Tabs */}
+          <div className="mb-6 border-b border-gray-200">
+            <div className="flex space-x-8">
+              <button
+                onClick={() => handleSortChange('createdAt')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  sortBy === 'createdAt'
+                    ? 'text-gray-800 border-gray-800'
+                    : 'text-gray-600 border-transparent hover:text-gray-800'
+                }`}
+              >
+                Đề xuất
+              </button>
+              <button
+                onClick={() => handleSortChange('newest')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  sortBy === 'newest'
+                    ? 'text-gray-800 border-gray-800'
+                    : 'text-gray-600 border-transparent hover:text-gray-800'
+                }`}
+              >
+                Mới đăng
+              </button>
+              <button
+                onClick={() => handleSortChange('hasVideo')}
+                className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
+                  sortBy === 'hasVideo'
+                    ? 'text-gray-800 border-gray-800'
+                    : 'text-gray-600 border-transparent hover:text-gray-800'
+                }`}
+              >
+                Có video
+              </button>
             </div>
           </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Tin mới/ngày</p>
-              <p className="text-2xl font-bold text-gray-900">1K+</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <MapPin className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Khu vực</p>
-              <p className="text-2xl font-bold text-gray-900">{LOCATIONS.length}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Quick Location Filter */}
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">Tìm theo khu vực</h3>
-        <div className="flex overflow-x-auto pb-2 space-x-3">
-          {LOCATIONS.slice(0, 6).map((location) => (
-            <button
-              key={location}
-              onClick={() => handleFilter({ location })}
-              className={`flex-shrink-0 px-4 py-2 rounded-lg border transition-colors ${
-                filters.location === location
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              {location}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Search and Filter */}
-      <SearchFilter
-        onSearch={handleSearch}
-        onFilter={handleFilter}
-        initialFilters={filters}
-      />
-
-      {/* Featured Posts */}
-      {featuredPosts.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Tin nổi bật</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onLike={handlePostLike}
-                onView={handlePostView}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div className="mb-6">
-        <div className="flex space-x-6 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`pb-2 text-sm font-medium transition-colors ${
-              activeTab === 'all'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Tất cả tin đăng
-          </button>
-          <button
-            onClick={() => setActiveTab('newest')}
-            className={`pb-2 text-sm font-medium transition-colors ${
-              activeTab === 'newest'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Mới nhất
-          </button>
-          <button
-            onClick={() => setActiveTab('featured')}
-            className={`pb-2 text-sm font-medium transition-colors ${
-              activeTab === 'featured'
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Nổi bật
-          </button>
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Đang tải...</span>
-        </div>
-      )}
-
-      {/* Posts Grid */}
-      {!loading && (
-        <>
-          {posts.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {posts.map((post, index) => (
-                  <div
-                    key={post.id}
-                    className="animate-in fade-in duration-300"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <PostCard
-                      post={post}
-                      onLike={handlePostLike}
-                      onView={handlePostView}
-                    />
+          {/* Posts List */}
+          {loading ? (
+            <div className="space-y-4">
+              {[...Array(5)].map((_, index) => (
+                <div key={index} className="bg-white rounded p-4 shadow-sm animate-pulse">
+                  <div className="flex space-x-4">
+                    <div className="bg-gray-200 rounded w-48 h-36"></div>
+                    <div className="flex-1 space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-full"></div>
+                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                    </div>
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-white rounded p-12 text-center shadow-sm">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
               </div>
+              <h3 className="text-lg font-medium text-gray-800 mb-2">Không tìm thấy bài đăng nào</h3>
+              <p className="text-gray-600 mb-4">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+              <button
+                onClick={() => {
+                  setFilters({});
+                  setCurrentPage(1);
+                }}
+                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )}
 
-              {/* Pagination */}
+          {/* Pagination */}
+          {!loading && posts.length > 0 && (
+            <div className="mt-8">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={handlePageChange}
-                hasNextPage={hasNextPage}
-                hasPreviousPage={currentPage > 1}
-                isLoading={searchLoading}
               />
-            </>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <HomeIcon className="w-16 h-16 mx-auto" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Không tìm thấy tin đăng
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc
-              </p>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilters({});
-                  loadInitialData();
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Xem tất cả tin đăng
-              </button>
             </div>
           )}
-        </>
-      )}
-
-      {/* Call to Action */}
-      <div className="mt-12 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-8 text-center">
-        <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Tại sao lại chọn FPTro?
-        </h2>
-        <p className="text-gray-600 mb-6 max-w-3xl mx-auto">
-          Chúng tôi biết bạn có rất nhiều lựa chọn, nhưng FPTro tự hào là trang web đứng top về các từ khóa: 
-          cho thuê phòng trọ, nhà trọ, thuê nhà nguyên căn, cho thuê căn hộ, tìm người ở ghép, cho thuê mặt bằng...
-        </p>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="text-2xl font-bold text-blue-600">130.000+</div>
-            <div className="text-sm text-gray-600">Chủ nhà & Môi giới</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="text-2xl font-bold text-blue-600">200.000+</div>
-            <div className="text-sm text-gray-600">Tin đăng</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="text-2xl font-bold text-blue-600">1.000+</div>
-            <div className="text-sm text-gray-600">Tin đăng/ngày</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm">
-            <div className="text-2xl font-bold text-blue-600">3.000.000+</div>
-            <div className="text-sm text-gray-600">Lượt xem/tháng</div>
-          </div>
         </div>
 
-        <Link 
-          to="/create-post"
-          className="inline-flex items-center px-8 py-3 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 font-semibold text-lg transform hover:scale-105 transition-all duration-200"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Đăng tin ngay
-        </Link>
+        {/* Sidebar */}
+        <div className="w-80 space-y-6">
+          {/* Search Filter */}
+          <SearchFilter onFilterChange={handleFilterChange} />
+
+          {/* Price Filter */}
+          <div className="bg-white rounded shadow-sm p-4">
+            <h3 className="font-medium text-gray-800 mb-3">Xem theo khoảng giá</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Dưới 1 triệu', max: 1000000 },
+                { label: 'Từ 1 - 2 triệu', min: 1000000, max: 2000000 },
+                { label: 'Từ 2 - 3 triệu', min: 2000000, max: 3000000 },
+                { label: 'Từ 3 - 5 triệu', min: 3000000, max: 5000000 },
+                { label: 'Từ 5 - 7 triệu', min: 5000000, max: 7000000 },
+                { label: 'Trên 7 triệu', min: 7000000 }
+              ].map((range, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleFilterChange({ 
+                    ...filters, 
+                    priceMin: range.min, 
+                    priceMax: range.max 
+                  })}
+                  className="text-left text-sm text-gray-600 hover:text-gray-800 py-1 transition-colors"
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+
+            <h3 className="font-medium text-gray-800 mb-3 mt-6">Xem theo diện tích</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'Dưới 20 m²', max: 20 },
+                { label: 'Từ 20 - 30m²', min: 20, max: 30 },
+                { label: 'Từ 30 - 50m²', min: 30, max: 50 },
+                { label: 'Trên 50m²', min: 50 }
+              ].map((range, index) => (
+                <button
+                  key={index}
+                  onClick={() => handleFilterChange({ 
+                    ...filters, 
+                    areaMin: range.min, 
+                    areaMax: range.max 
+                  })}
+                  className="text-left text-sm text-gray-600 hover:text-gray-800 py-1 transition-colors"
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Posts */}
+          <div className="bg-white rounded shadow-sm p-4">
+            <h3 className="font-medium text-gray-800 mb-4">Tin mới đăng</h3>
+            <div className="space-y-4">
+              {posts.slice(0, 5).map((post) => (
+                <div key={post.id} className="flex space-x-3">
+                  <img
+                    src={post.images?.[0] || '/placeholder-image.jpg'}
+                    alt={post.title}
+                    className="w-20 h-16 object-cover rounded flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-medium text-blue-600 hover:text-blue-800 line-clamp-2 cursor-pointer">
+                      {post.title}
+                    </h4>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-sm font-semibold text-green-600">
+                        {post.price?.toLocaleString()} đ/tháng
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Blog Posts */}
+          <div className="bg-white rounded shadow-sm p-4">
+            <h3 className="font-medium text-gray-800 mb-4">Bài viết mới</h3>
+            <ul className="space-y-2">
+              <li>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-800 transition-colors block py-1">
+                  5 điều cần lưu ý khi thuê phòng trọ
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-800 transition-colors block py-1">
+                  Hướng dẫn tính tiền điện nước phòng trọ
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-800 transition-colors block py-1">
+                  Kinh nghiệm thuê phòng trọ cho sinh viên
+                </a>
+              </li>
+              <li>
+                <a href="#" className="text-sm text-gray-600 hover:text-gray-800 transition-colors block py-1">
+                  Những khu vực cho thuê phòng trọ giá rẻ
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Home; 

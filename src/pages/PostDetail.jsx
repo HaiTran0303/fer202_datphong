@@ -366,6 +366,7 @@ function PostDetail() {
                 <Home size={16} className="mr-1" />
                 <span>{getRoomTypeLabel(post.roomType)}</span>
               </div>
+
             </div>
             
             <div className="prose max-w-none mb-6">

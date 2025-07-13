@@ -1,275 +1,198 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Heart, 
-  Eye, 
-  Star, 
-  Camera, 
-  Phone, 
-  MapPin, 
-  Calendar,
-  User,
-  Maximize2
-} from 'lucide-react';
 
-function PostCard({ post, onLike, onView }) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+const PostCard = ({ post }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-
-  const handleLike = (e) => {
-    e.preventDefault();
-    setIsLiked(!isLiked);
-    onLike?.(post.id);
-  };
-
-  const handleView = () => {
-    onView?.(post.id);
-  };
+  const [isLiked, setIsLiked] = useState(false);
 
   const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND'
-    }).format(price);
+    if (price >= 1000000) {
+      return `${(price / 1000000).toFixed(1)} triệu/tháng`;
+    }
+    return `${price?.toLocaleString()} đồng/tháng`;
   };
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Hôm nay';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 1) return 'Hôm nay';
-    if (diffDays === 2) return 'Hôm qua';
-    if (diffDays <= 7) return `${diffDays} ngày trước`;
-    
-    return date.toLocaleDateString('vi-VN');
+    if (diffDays === 1) {
+      return 'Hôm nay';
+    } else if (diffDays <= 7) {
+      return `${diffDays} ngày trước`;
+    } else {
+      return date.toLocaleDateString('vi-VN');
+    }
   };
 
-  const nextImage = (e) => {
-    e.preventDefault();
-    setCurrentImageIndex((prev) => 
-      prev === post.images.length - 1 ? 0 : prev + 1
-    );
+  const nextImage = () => {
+    if (post.images && post.images.length > 1) {
+      setCurrentImageIndex((prev) => 
+        prev === post.images.length - 1 ? 0 : prev + 1
+      );
+    }
   };
 
-  const prevImage = (e) => {
+  const prevImage = () => {
+    if (post.images && post.images.length > 1) {
+      setCurrentImageIndex((prev) => 
+        prev === 0 ? post.images.length - 1 : prev - 1
+      );
+    }
+  };
+
+  const handleLike = (e) => {
     e.preventDefault();
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? post.images.length - 1 : prev - 1
-    );
+    e.stopPropagation();
+    setIsLiked(!isLiked);
   };
 
   return (
-    <div className="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden transform hover:-translate-y-1">
-      {/* Image Gallery */}
-      <div className="relative overflow-hidden">
-        <Link to={`/post/${post.id}`} onClick={handleView}>
-          <div className="relative h-48 bg-gray-200">
-            {/* Main Image */}
-            <img
-              src={post.images?.[currentImageIndex] || post.images?.[0]}
-              alt={post.title}
-              className={`w-full h-full object-cover transition-all duration-500 ${
-                imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-110'
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              loading="lazy"
-            />
-            
-            {/* Loading Skeleton */}
-            {!imageLoaded && (
-              <div className="absolute inset-0 bg-gray-200 animate-pulse">
-                <div className="flex items-center justify-center h-full">
-                  <div className="w-12 h-12 bg-gray-300 rounded-full animate-bounce"></div>
+    <div className="bg-white rounded shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+      <div className="flex space-x-4">
+        {/* Image Gallery */}
+        <div className="relative flex-shrink-0">
+          <div className="w-48 h-36 rounded overflow-hidden bg-gray-100 relative">
+            {post.images && post.images.length > 0 ? (
+              <>
+                <img
+                  src={post.images[currentImageIndex]}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Image Counter */}
+                {post.images.length > 1 && (
+                  <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                    </svg>
+                    {post.images.length}
+                  </div>
+                )}
+
+                {/* Navigation Arrows */}
+                {post.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-black bg-opacity-50 text-white rounded-full flex items-center justify-center hover:bg-opacity-70 transition-all"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Title with VIP Badge */}
+          <div className="mb-2">
+            <h3 className="text-lg font-medium text-red-600 hover:text-red-700 cursor-pointer line-clamp-2 transition-colors">
+              <span className="inline-flex items-center mr-2">
+                {/* Star Rating */}
+                <div className="flex text-yellow-400 mr-2">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+              </span>
+              {post.title}
+            </h3>
+          </div>
+
+          {/* Price and Details */}
+          <div className="mb-2 flex items-center text-sm">
+            <span className="text-green-600 font-semibold text-lg">
+              {formatPrice(post.price)}
+            </span>
+            <span className="mx-2 text-gray-400">•</span>
+            <span className="text-gray-600">
+              {post.area} m²
+            </span>
+            <span className="mx-2 text-gray-400">•</span>
+            <span className="text-gray-600">
+              {post.location}
+            </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-gray-600 text-sm line-clamp-2 mb-3 leading-relaxed">
+            {post.description}
+          </p>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between">
+            {/* Author and Date */}
+            <div className="flex items-center space-x-2 flex-1">
+              <img
+                src={post.authorAvatar || '/default-avatar.png'}
+                alt={post.authorName}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm text-gray-800 line-clamp-1">
+                  {post.authorName || 'Chủ nhà'}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatDate(post.createdAt)}
                 </div>
               </div>
-            )}
-
-            {/* Image Navigation */}
-            {post.images?.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </button>
-                <button
-                  onClick={nextImage}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
-              </>
-            )}
-
-            {/* Image Count Badge */}
-            {post.images?.length > 1 && (
-              <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white px-2 py-1 rounded-full text-xs flex items-center gap-1">
-                <Camera className="w-3 h-3" />
-                {post.images.length}
-              </div>
-            )}
-
-            {/* Featured Badge */}
-            {post.featured && (
-              <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
-                Nổi bật
-              </div>
-            )}
-
-            {/* Like Button */}
-            <button
-              onClick={handleLike}
-              className={`absolute top-2 right-2 p-2 rounded-full transition-all duration-200 ${
-                isLiked 
-                  ? 'bg-red-500 text-white transform scale-110' 
-                  : 'bg-white bg-opacity-80 text-gray-600 hover:bg-opacity-100 hover:text-red-500'
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            </button>
-
-            {/* Expand Icon */}
-            <div className="absolute bottom-2 left-2 bg-white bg-opacity-80 text-gray-600 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <Maximize2 className="w-3 h-3" />
             </div>
-          </div>
-        </Link>
-
-        {/* Image Dots Indicator */}
-        {post.images?.length > 1 && (
-          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
-            {post.images.map((_, index) => (
+            
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-2">
+              {/* Contact Button */}
+              <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+                {post.contactPhone || '0123456789'}
+              </button>
+              
+              {/* Save Button */}
               <button
-                key={index}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setCurrentImageIndex(index);
-                }}
-                className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                  index === currentImageIndex 
-                    ? 'bg-white scale-125' 
-                    : 'bg-white bg-opacity-50 hover:bg-opacity-75'
+                onClick={handleLike}
+                className={`p-2 rounded border transition-colors ${
+                  isLiked 
+                    ? 'bg-red-50 border-red-200 text-red-600' 
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
                 }`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="p-4">
-        {/* Rating */}
-        {post.rating && (
-          <div className="flex items-center mb-2">
-            <div className="flex text-yellow-400 mr-2">
-              {[...Array(5)].map((_, i) => (
-                <Star 
-                  key={i} 
-                  className={`w-3 h-3 ${i < post.rating ? 'fill-current' : ''}`} 
-                />
-              ))}
-            </div>
-            <span className="text-xs text-gray-500">({post.rating}/5)</span>
-          </div>
-        )}
-
-        {/* Title */}
-        <h3 className="text-base font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors duration-200">
-          <Link to={`/post/${post.id}`} onClick={handleView}>
-            {post.title}
-          </Link>
-        </h3>
-
-        {/* Price and Area */}
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-lg font-bold text-green-600">
-            {formatPrice(post.price)}
-          </span>
-          <span className="text-sm text-gray-500">
-            {post.area} m²
-          </span>
-        </div>
-
-        {/* Location */}
-        <div className="flex items-center text-gray-600 mb-3">
-          <MapPin className="w-4 h-4 mr-1" />
-          <span className="text-sm line-clamp-1">{post.district}, {post.location}</span>
-        </div>
-
-        {/* Description */}
-        <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-          {post.description}
-        </p>
-
-        {/* Amenities */}
-        {post.amenities && post.amenities.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {post.amenities.slice(0, 3).map((amenity, index) => (
-              <span 
-                key={index}
-                className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full"
+                aria-label="Lưu tin này"
               >
-                {amenity}
-              </span>
-            ))}
-            {post.amenities.length > 3 && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                +{post.amenities.length - 3} khác
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          {/* Author Info */}
-          <div className="flex items-center">
-            <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-2">
-              <User className="w-4 h-4 text-gray-500" />
+                <svg className="w-4 h-4" fill={isLiked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              </button>
             </div>
-            <div>
-              <div className="text-sm font-medium text-gray-900">
-                {post.contact?.name || 'Chủ nhà'}
-              </div>
-              <div className="flex items-center text-xs text-gray-500">
-                <Calendar className="w-3 h-3 mr-1" />
-                {formatDate(post.createdAt)}
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center space-x-2">
-            {/* Views */}
-            <div className="flex items-center text-gray-500">
-              <Eye className="w-4 h-4 mr-1" />
-              <span className="text-sm">{post.views || 0}</span>
-            </div>
-
-            {/* Contact Button */}
-            <a
-              href={`tel:${post.contact?.phone}`}
-              className="flex items-center px-3 py-1 bg-green-500 text-white rounded-full text-sm hover:bg-green-600 transition-colors duration-200 transform hover:scale-105"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Phone className="w-3 h-3 mr-1" />
-              Gọi
-            </a>
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default PostCard; 
