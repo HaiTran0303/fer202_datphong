@@ -13,7 +13,10 @@ import {
   Bookmark,
   ChevronDown,
   MapPin,
-  Filter
+  Filter,
+  Phone,
+  MessageCircle,
+  ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -24,15 +27,15 @@ function Layout({ children }) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const navItems = [
-    { name: 'Phòng trọ', path: '/search', active: true },
-    { name: 'Nhà nguyên căn', path: '/search' },
-    { name: 'Căn hộ chung cư', path: '/search' },
-    { name: 'Căn hộ mini', path: '/search' },
-    { name: 'Căn hộ dịch vụ', path: '/search' },
-    { name: 'Ở ghép', path: '/search' },
-    { name: 'Mặt bằng', path: '/search' },
+    { name: 'Phòng trọ', path: '/', active: true },
+    { name: 'Nhà nguyên căn', path: '/nha-nguyen-can' },
+    { name: 'Căn hộ chung cư', path: '/can-ho-chung-cu' },
+    { name: 'Căn hộ mini', path: '/can-ho-mini' },
+    { name: 'Căn hộ dịch vụ', path: '/can-ho-dich-vu' },
+    { name: 'Ở ghép', path: '/o-ghep' },
+    { name: 'Mặt bằng', path: '/mat-bang' },
     { name: 'Blog', path: '/blog' },
-    { name: 'Bảng giá dịch vụ', path: '/pricing' },
+    { name: 'Bảng giá dịch vụ', path: '/bang-gia' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -48,203 +51,246 @@ function Layout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        {/* Top Header */}
-        <div className="bg-blue-600 text-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="flex justify-between items-center py-3">
-              {/* Logo */}
-              <div className="flex items-center">
-                <Link to="/" className="flex items-center">
-                  <span className="text-2xl font-bold">FPTro</span>
-                  <span className="text-xs ml-1 opacity-80">Kênh thông tin phòng trọ số 1 Việt Nam</span>
-                </Link>
-              </div>
+      {/* Simple Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Top Header */}
+          <div className="flex justify-between items-center py-3 border-b border-gray-100">
+            {/* Logo */}
+            <Link to="/" className="flex items-center">
+              <div className="text-2xl font-bold text-blue-600">FPTro</div>
+              <span className="text-xs ml-2 text-gray-500">Kênh thông tin phòng trọ số 1 Việt Nam</span>
+            </Link>
 
-              {/* Top Right Actions */}
-              <div className="flex items-center space-x-4 text-sm">
-                <button className="flex items-center space-x-1 px-3 py-1.5 bg-white/10 rounded hover:bg-white/20 transition-colors">
-                  <MapPin size={14} />
-                  <span>Tìm theo khu vực</span>
-                </button>
-                
-                <button className="flex items-center space-x-1 px-3 py-1.5 bg-white/10 rounded hover:bg-white/20 transition-colors">
-                  <Filter size={14} />
-                  <span>Bộ lọc</span>
-                </button>
+            {/* Search Bar */}
+            <div className="hidden md:flex items-center space-x-2">
+              <button className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 border rounded-lg">
+                <MapPin className="w-4 h-4 mr-2" />
+                <span className="text-sm">Tìm theo khu vực</span>
+              </button>
+              <button className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-50 border rounded-lg">
+                <Filter className="w-4 h-4 mr-1" />
+                <span className="text-sm">Bộ lọc</span>
+              </button>
+            </div>
 
-                {currentUser ? (
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center space-x-1 hover:text-blue-200 transition-colors">
-                      <Heart size={14} />
-                      <span>Tin đã lưu</span>
+            {/* Right Actions */}
+            <div className="flex items-center space-x-3">
+              {currentUser ? (
+                <>
+                  <Link 
+                    to="/saved" 
+                    className="hidden lg:flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                  >
+                    <Heart className="w-4 h-4 mr-2" />
+                    <span className="text-sm">Tin đã lưu</span>
+                  </Link>
+
+                  <Link 
+                    to="/create-post" 
+                    className="hidden lg:flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    <span className="text-sm font-medium">Đăng tin</span>
+                  </Link>
+
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100"
+                    >
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
                     </button>
-                    
-                    <div className="relative">
-                      <button
-                        onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                        className="flex items-center space-x-1 hover:text-blue-200 transition-colors"
-                      >
-                        <User size={14} />
-                        <span>Quản lý</span>
-                        <ChevronDown size={12} />
-                      </button>
 
-                      {isProfileMenuOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border text-gray-700 z-50">
-                          <div className="py-2">
-                            <div className="px-4 py-2 border-b border-gray-100">
-                              <div className="font-medium text-sm">{currentUser.displayName || currentUser.email}</div>
-                            </div>
-                            <Link
-                              to="/profile"
-                              className="block px-4 py-2 text-sm hover:bg-gray-50"
-                              onClick={() => setIsProfileMenuOpen(false)}
-                            >
-                              Thông tin cá nhân
-                            </Link>
-                            <Link
-                              to="/create-post"
-                              className="block px-4 py-2 text-sm hover:bg-gray-50"
-                              onClick={() => setIsProfileMenuOpen(false)}
-                            >
-                              Đăng tin cho thuê
-                            </Link>
-                            <Link
-                              to="/favorites"
-                              className="block px-4 py-2 text-sm hover:bg-gray-50"
-                              onClick={() => setIsProfileMenuOpen(false)}
-                            >
-                              Tin đã lưu
-                            </Link>
-                            <hr className="my-1" />
-                            <button
-                              onClick={handleLogout}
-                              className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                            >
-                              Thoát
-                            </button>
-                          </div>
+                    {isProfileMenuOpen && (
+                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border py-1 z-50">
+                        <div className="px-4 py-2 border-b">
+                          <p className="text-sm font-medium text-gray-900">{currentUser?.displayName}</p>
+                          <p className="text-xs text-gray-500">{currentUser?.email}</p>
                         </div>
-                      )}
-                    </div>
-                    
-                    <span className="text-sm">{currentUser.displayName || 'Người dùng'}</span>
+                        <Link to="/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                          <User className="w-4 h-4 mr-3" />
+                          Hồ sơ
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        >
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Đăng xuất
+                        </button>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center space-x-4">
-                    <Link to="/login" className="text-sm hover:text-blue-200 transition-colors">
-                      Đăng nhập
-                    </Link>
-                    <Link to="/register" className="text-sm hover:text-blue-200 transition-colors">
-                      Đăng ký
-                    </Link>
-                  </div>
-                )}
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/login" 
+                    className="hidden lg:flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    <span className="text-sm">Đăng nhập</span>
+                  </Link>
 
-                <Link 
-                  to="/create-post" 
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-1.5 rounded text-sm font-medium transition-colors flex items-center space-x-1"
-                >
-                  <Plus size={14} />
-                  <span>Đăng tin</span>
-                </Link>
+                  <Link 
+                    to="/register" 
+                    className="hidden lg:flex items-center px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    <span className="text-sm">Đăng ký</span>
+                  </Link>
 
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="md:hidden"
-                >
-                  {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                </button>
-              </div>
+                  <Link 
+                    to="/create-post" 
+                    className="hidden lg:flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    <span className="text-sm font-medium">Đăng tin</span>
+                  </Link>
+                </>
+              )}
+
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="lg:hidden p-2 text-gray-600"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
             </div>
           </div>
-        </div>
 
-        {/* Navigation Bar */}
-        <div className="bg-gray-50 border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4">
-            <nav className="hidden md:flex">
+          {/* Navigation Bar */}
+          <nav className="hidden lg:block">
+            <ul className="flex h-12">
               {navItems.map((item, index) => (
-                <Link
-                  key={item.path + index}
-                  to={item.path}
-                  className={`px-4 py-3 text-sm font-medium transition-colors relative ${
-                    item.active || isActive(item.path)
-                      ? 'text-red-500 border-b-2 border-red-500'
-                      : 'text-gray-700 hover:text-red-500'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Mobile Menu */}
-            {isMobileMenuOpen && (
-              <div className="md:hidden bg-white border-t py-2">
-                {navItems.map((item, index) => (
+                <li key={index} className="h-full mr-4">
                   <Link
-                    key={item.path + index}
                     to={item.path}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className={`flex items-center h-full px-1 text-sm border-b-2 ${
+                      isActive(item.path) || (item.active && location.pathname === '/')
+                        ? 'border-orange-500 text-orange-500'
+                        : 'border-transparent text-gray-600 hover:text-gray-900'
+                    }`}
                   >
                     {item.name}
                   </Link>
-                ))}
-              </div>
-            )}
-          </div>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </header>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="fixed right-0 top-0 h-full w-80 bg-white shadow-lg">
+            <div className="flex items-center justify-between p-4 border-b">
+              <span className="text-lg font-semibold">FPTro</span>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4">
+              {!currentUser && (
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <Link 
+                    to="/login" 
+                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-full text-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Đăng nhập
+                  </Link>
+                  <Link 
+                    to="/register" 
+                    className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-full text-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Đăng ký
+                  </Link>
+                </div>
+              )}
+              
+              <Link 
+                to="/create-post" 
+                className="flex items-center justify-center w-full px-4 py-2 bg-red-500 text-white rounded-full text-sm mb-4"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Đăng tin mới
+              </Link>
+
+              <div className="bg-white rounded-lg">
+                <ul className="space-y-0">
+                  {navItems.map((item, index) => (
+                    <li key={index}>
+                      <Link
+                        to={item.path}
+                        className="flex items-center justify-between py-3 px-0 border-b border-gray-100 text-gray-700"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <span>{item.name}</span>
+                        <ChevronRight className="w-5 h-5 text-orange-500" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content */}
-      <main className="flex-1">
+      <main>
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
+      {/* Simple Footer */}
+      <footer className="bg-yellow-50 pt-5 pb-4 mt-6 text-sm">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="font-bold text-lg mb-4">FPTro</h3>
-              <p className="text-sm text-gray-400">
-                Website đăng tin cho thuê phòng trọ, nhà trọ, căn hộ, ký túc xá an toàn.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Hỗ trợ khách hàng</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Câu hỏi thường gặp</li>
-                <li>Hướng dẫn đăng tin</li>
-                <li>Quy định đăng tin</li>
-                <li>Liên hệ</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Về chúng tôi</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Giới thiệu</li>
-                <li>Tuyển dụng</li>
-                <li>Truyền thông</li>
-                <li>Blog</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Liên kết</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Facebook</li>
-                <li>Twitter</li>
-                <li>Instagram</li>
-                <li>YouTube</li>
-              </ul>
+          <div className="text-center">
+            <h3 className="text-lg font-semibold mb-4">Hỗ trợ chủ nhà đăng tin</h3>
+            <p className="text-gray-600 mb-4">Nếu bạn cần hỗ trợ đăng tin, vui lòng liên hệ số điện thoại bên dưới:</p>
+            <div className="flex justify-center space-x-4">
+              <a 
+                href="tel:0909316890" 
+                className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+              >
+                <Phone className="w-4 h-4 mr-2" />
+                ĐT: 0909316890
+              </a>
+              <a 
+                href="https://zalo.me/0909316890" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Zalo: 0909316890
+              </a>
             </div>
           </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-sm text-gray-400">
-            <p>© 2024 FPTro. Tất cả quyền được bảo lưu.</p>
+
+          <div className="border-t border-gray-200 pt-4 text-xs text-gray-500 text-center mt-6">
+            <p className="font-semibold text-gray-700 mb-2">CÔNG TY TNHH FPTRO</p>
+            <p className="mb-1">Địa chỉ: FPT University, Hòa Lạc, Hà Nội, Việt Nam</p>
+            <p className="mb-1">
+              Tổng đài CSKH: 
+              <a href="tel:0909316890" className="text-red-500 ml-1">0909 316 890</a>
+              {' '}- Email: support@fptro.com
+            </p>
           </div>
         </div>
       </footer>
