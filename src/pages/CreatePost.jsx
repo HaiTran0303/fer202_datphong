@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { postsService } from '../utils/firebase';
+import { LOCATIONS, DISTRICTS } from '../utils/constants';
 import { 
   User, 
   MapPin, 
@@ -27,7 +28,6 @@ const CreatePost = () => {
     budget: '',
     location: '',
     district: '',
-    city: 'Hồ Chí Minh',
     roomType: 'double',
     genderPreference: '',
     myGender: '',
@@ -134,7 +134,7 @@ const CreatePost = () => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value || ''
     }));
   };
 
@@ -169,37 +169,39 @@ const CreatePost = () => {
     setLoading(true);
     setError('');
 
-    // Debug: Log form data
-    console.log('Form data:', formData);
-    console.log('Current user:', currentUser);
-
     // Validate required fields
     if (!formData.title.trim()) {
       setError('Vui lòng nhập tiêu đề bài đăng');
       setLoading(false);
       return;
     }
-
     if (!formData.description.trim()) {
       setError('Vui lòng nhập mô tả');
       setLoading(false);
       return;
     }
-
     if (!formData.budget) {
       setError('Vui lòng nhập ngân sách');
       setLoading(false);
       return;
     }
-
     if (!formData.contactName.trim()) {
       setError('Vui lòng nhập tên liên hệ');
       setLoading(false);
       return;
     }
-
     if (!formData.contactPhone.trim()) {
       setError('Vui lòng nhập số điện thoại');
+      setLoading(false);
+      return;
+    }
+    if (!formData.location) {
+      setError('Vui lòng chọn tỉnh/thành phố');
+      setLoading(false);
+      return;
+    }
+    if (!formData.district) {
+      setError('Vui lòng chọn quận/huyện');
       setLoading(false);
       return;
     }
@@ -209,6 +211,8 @@ const CreatePost = () => {
         // Update post
         await postsService.updatePost(postId, {
           ...formData,
+          location: formData.location || '',
+          district: formData.district || '',
           updatedAt: new Date().toISOString(),
         });
         alert('Cập nhật bài đăng thành công!');
@@ -216,6 +220,8 @@ const CreatePost = () => {
         // Create new post
         const postData = {
           ...formData,
+          location: formData.location || '',
+          district: formData.district || '',
           type: 'roommate-search',
           budget: parseInt(formData.budget),
           authorId: currentUser.uid,
@@ -260,7 +266,7 @@ const CreatePost = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 space-y-6">
           {/* Basic Information */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -379,36 +385,35 @@ const CreatePost = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thành phố *
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố</label>
                 <select
-                  name="city"
-                  value={formData.city}
+                  name="location"
+                  value={formData.location}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 >
-                  <option value="Hồ Chí Minh">Hồ Chí Minh</option>
-                  <option value="Hà Nội">Hà Nội</option>
-                  <option value="Đà Nẵng">Đà Nẵng</option>
-                  <option value="Cần Thơ">Cần Thơ</option>
+                  <option value="">Chọn tỉnh/thành phố</option>
+                  {LOCATIONS.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Quận/Huyện *
-                </label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Quận/Huyện</label>
+                <select
                   name="district"
                   value={formData.district}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="VD: Quận 1"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
-                />
+                  disabled={!formData.location}
+                >
+                  <option value="">Chọn quận/huyện</option>
+                  {DISTRICTS[formData.location]?.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
               </div>
 
               <div>

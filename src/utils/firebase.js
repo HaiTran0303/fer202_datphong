@@ -84,7 +84,10 @@ export const postsService = {
       
       // Apply filters
       if (options.location) {
-        queryConstraints.push(where('city', '==', options.location)); // Assuming 'city' is the field for location
+        queryConstraints.push(where('location', '==', options.location));
+      }
+      if (options.district) {
+        queryConstraints.push(where('district', '==', options.district));
       }
       if (options.category) {
         queryConstraints.push(where('category', '==', options.category));
@@ -109,6 +112,77 @@ export const postsService = {
       });
 
       console.log(`Successfully loaded ${posts.length} posts from Firebase`);
+
+      // Client-side filtering for search term
+      if (options.search && options.search.trim()) {
+        const searchLower = options.search.toLowerCase();
+        posts = posts.filter(post => 
+          post.title?.toLowerCase().includes(searchLower) ||
+          post.description?.toLowerCase().includes(searchLower) ||
+          post.location?.toLowerCase().includes(searchLower) ||
+          post.address?.toLowerCase().includes(searchLower) ||
+          post.city?.toLowerCase().includes(searchLower)
+        );
+      }
+
+      // Client-side filtering for price range
+      if (options.priceMin !== undefined || options.priceMax !== undefined) {
+        posts = posts.filter(post => {
+          const price = post.price || post.budget || 0;
+          if (options.priceMin !== undefined && price < options.priceMin) return false;
+          if (options.priceMax !== undefined && price > options.priceMax) return false;
+          return true;
+        });
+      }
+
+      // Client-side filtering for area range
+      if (options.areaMin !== undefined || options.areaMax !== undefined) {
+        posts = posts.filter(post => {
+          const area = post.area || 0;
+          if (options.areaMin !== undefined && area < options.areaMin) return false;
+          if (options.areaMax !== undefined && area > options.areaMax) return false;
+          return true;
+        });
+      }
+
+      // Client-side filtering for amenities
+      if (options.amenities && options.amenities.length > 0) {
+        posts = posts.filter(post => 
+          options.amenities.every(amenity => 
+            post.amenities?.includes(amenity) || 
+            post.features?.includes(amenity)
+          )
+        );
+      }
+
+      // Apply sorting
+      if (options.sortBy) {
+        switch (options.sortBy) {
+          case 'newest':
+            posts.sort((a, b) => {
+              const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+              const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+              return dateB - dateA;
+            });
+            break;
+          case 'hasVideo':
+            posts = posts.filter(post => post.hasVideo || post.videoUrl);
+            break;
+          case 'price':
+            posts.sort((a, b) => (a.price || 0) - (b.price || 0));
+            break;
+          case 'priceDesc':
+            posts.sort((a, b) => (b.price || 0) - (a.price || 0));
+            break;
+          default:
+            // Default sorting by createdAt
+            posts.sort((a, b) => {
+              const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+              const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+              return dateB - dateA;
+            });
+        }
+      }
 
       // Calculate pagination info
       const total = posts.length;

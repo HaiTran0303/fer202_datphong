@@ -6,6 +6,26 @@ export const LOCATIONS = [
   'Quy Nhơn'
 ];
 
+export const DISTRICTS = {
+  'Hồ Chí Minh': [
+    'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6',
+    'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10', 'Quận 11', 'Quận 12',
+    'Bình Thạnh', 'Phú Nhuận', 'Tân Bình', 'Tân Phú', 'Gò Vấp', 'Bình Tân', 'Thủ Đức', 'Bình Chánh', 'Nhà Bè', 'Hóc Môn', 'Củ Chi', 'Cần Giờ'
+  ],
+  'Hà Nội': [
+    'Ba Đình', 'Hoàn Kiếm', 'Tây Hồ', 'Long Biên', 'Cầu Giấy', 'Đống Đa', 'Hai Bà Trưng', 'Hoàng Mai', 'Thanh Xuân', 'Hà Đông', 'Nam Từ Liêm', 'Bắc Từ Liêm', 'Thanh Trì', 'Gia Lâm', 'Đông Anh', 'Sóc Sơn', 'Mê Linh', 'Sơn Tây', 'Ba Vì', 'Phúc Thọ', 'Đan Phượng', 'Hoài Đức', 'Quốc Oai', 'Thạch Thất', 'Chương Mỹ', 'Thanh Oai', 'Thường Tín', 'Phú Xuyên', 'Ứng Hòa', 'Mỹ Đức'
+  ],
+  'Đà Nẵng': [
+    'Hải Châu', 'Thanh Khê', 'Sơn Trà', 'Ngũ Hành Sơn', 'Liên Chiểu', 'Cẩm Lệ', 'Hòa Vang', 'Hoàng Sa'
+  ],
+  'Cần Thơ': [
+    'Ninh Kiều', 'Bình Thủy', 'Cái Răng', 'Ô Môn', 'Thốt Nốt', 'Phong Điền', 'Cờ Đỏ', 'Vĩnh Thạnh', 'Thới Lai'
+  ],
+  'Quy Nhơn': [
+    'Quy Nhơn', 'An Nhơn', 'Tuy Phước', 'Phù Cát', 'Phù Mỹ', 'Hoài Nhơn', 'Hoài Ân', 'Tây Sơn', 'Vân Canh', 'Vĩnh Thạnh', 'An Lão'
+  ]
+};
+
 export const CATEGORIES = [
   'Phòng trọ',
   'Nhà nguyên căn',

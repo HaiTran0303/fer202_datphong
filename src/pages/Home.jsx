@@ -11,6 +11,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
@@ -19,13 +20,22 @@ const Home = () => {
   const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
-      console.log('Loading posts with filters:', filters);
-      const result = await postsService.getPosts({
+      console.log('Loading posts with filters:', filters, 'search:', searchTerm);
+      
+      // Build query parameters
+      const queryParams = {
         ...filters,
         page: currentPage,
         limit: 20,
         sortBy
-      });
+      };
+
+      // Add search term if exists
+      if (searchTerm.trim()) {
+        queryParams.search = searchTerm.trim();
+      }
+
+      const result = await postsService.getPosts(queryParams);
       
       console.log('Posts loaded:', result);
       
@@ -60,9 +70,20 @@ const Home = () => {
         );
       }
 
+      // Client-side search filtering
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase();
+        filteredPosts = filteredPosts.filter(post => 
+          post.title?.toLowerCase().includes(searchLower) ||
+          post.description?.toLowerCase().includes(searchLower) ||
+          post.location?.toLowerCase().includes(searchLower) ||
+          post.address?.toLowerCase().includes(searchLower)
+        );
+      }
+
       setPosts(filteredPosts);
-      setTotalPages(result.totalPages || 1); // Total pages based on initial fetch, not client-side filter
-      setTotalPosts(filteredPosts.length); // Total posts based on client-side filter
+      setTotalPages(result.totalPages || 1);
+      setTotalPosts(filteredPosts.length);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải dữ liệu');
       console.error('Error loading posts:', err);
@@ -74,7 +95,7 @@ const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, currentPage, sortBy]);
+  }, [filters, searchTerm, currentPage, sortBy]);
 
   useEffect(() => {
     console.log('Home component: loading posts due to dependency change...');
@@ -86,6 +107,11 @@ const Home = () => {
     setCurrentPage(1);
   };
 
+  const handleSearch = (term) => {
+    setSearchTerm(term);
+    setCurrentPage(1);
+  };
+
   const handleSortChange = (newSort) => {
     setSortBy(newSort);
     setCurrentPage(1);
@@ -94,6 +120,12 @@ const Home = () => {
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLocationFilter = (location) => {
+    const newFilters = location ? { ...filters, location } : { ...filters };
+    delete newFilters.location; // Remove location if empty
+    handleFilterChange(newFilters);
   };
 
   if (error) {
@@ -134,7 +166,7 @@ const Home = () => {
               {LOCATIONS.map((location) => (
                 <button
                   key={location}
-                  onClick={() => handleFilterChange({ ...filters, location: location })}
+                  onClick={() => handleLocationFilter(location)}
                   className={`flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm hover:shadow-md transition-shadow ${
                     filters.location === location ? 'bg-blue-50 border-blue-300 text-blue-600' : ''
                   }`}
@@ -143,6 +175,15 @@ const Home = () => {
                   <div className="font-medium text-gray-800">{location}</div>
                 </button>
               ))}
+              <button
+                onClick={() => handleLocationFilter('')}
+                className="flex-shrink-0 bg-white border border-gray-200 rounded px-4 py-3 text-sm text-blue-600 hover:shadow-md transition-shadow"
+              >
+                Tất cả
+                <svg className="w-3 h-3 ml-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -211,6 +252,7 @@ const Home = () => {
               <button
                 onClick={() => {
                   setFilters({});
+                  setSearchTerm('');
                   setCurrentPage(1);
                 }}
                 className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
@@ -240,10 +282,14 @@ const Home = () => {
           )}
         </div>
 
-          {/* Sidebar */}
+        {/* Sidebar */}
         <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-6">
           {/* Search Filter */}
-          <SearchFilter onFilterChange={handleFilterChange} initialFilters={filters} />
+          <SearchFilter 
+            onSearch={handleSearch} 
+            onFilter={handleFilterChange} 
+            initialFilters={filters} 
+          />
 
           {/* Recent Posts */}
           <div className="bg-white rounded shadow-sm p-4">

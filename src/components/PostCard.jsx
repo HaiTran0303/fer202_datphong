@@ -127,7 +127,7 @@ const PostCard = ({ post }) => {
           {/* Price and Details */}
           <div className="mb-2 flex items-center text-sm">
             <span className="text-green-600 font-semibold text-lg">
-                              {formatPrice(post.budget || post.price)}
+              {formatPrice(post.budget || post.price)}
             </span>
             <span className="mx-2 text-gray-400">•</span>
             <span className="text-gray-600">
@@ -135,7 +135,7 @@ const PostCard = ({ post }) => {
             </span>
             <span className="mx-2 text-gray-400">•</span>
             <span className="text-gray-600">
-              {post.location}
+              {post.district ? `${post.district}, ${post.location}` : post.location}
             </span>
           </div>
 
