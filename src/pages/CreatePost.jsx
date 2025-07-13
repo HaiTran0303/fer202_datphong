@@ -51,6 +51,60 @@ const CreatePost = () => {
     }
   }, [currentUser, navigate]);
 
+  // Test function to debug
+  const testPost = async () => {
+    console.log('Testing post creation...');
+    console.log('Current user:', currentUser);
+    
+    if (!currentUser) {
+      alert('Vui lòng đăng nhập trước khi đăng tin');
+      navigate('/login');
+      return;
+    }
+    
+    try {
+      const testData = {
+        title: 'Test Post - Tìm bạn ghép trọ',
+        description: 'Đây là bài test để kiểm tra chức năng đăng tin',
+        budget: 3000000,
+        location: 'Test Location',
+        district: 'Quận 1',
+        city: 'Hồ Chí Minh',
+        roomType: 'double',
+        genderPreference: 'female',
+        myGender: 'female',
+        school: 'Đại học FPT',
+        major: 'Công nghệ thông tin',
+        year: '2',
+        availableFrom: '2024-02-01',
+        contactName: 'Test User',
+        contactPhone: '0123456789',
+        interests: ['Đọc sách', 'Nghe nhạc'],
+        lifestyle: ['Sạch sẽ', 'Yên tĩnh'],
+        images: [],
+        type: 'roommate-search',
+        authorId: currentUser.uid,
+        authorName: 'Test User',
+        authorPhone: '0123456789',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'active'
+      };
+      
+      console.log('Creating test post with data:', testData);
+      const result = await postsService.createPost(testData);
+      console.log('Test post created successfully:', result);
+      alert('Test post created successfully!');
+      
+      // Refresh page to show new post
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('Error creating test post:', error);
+      alert('Error creating test post: ' + error.message);
+    }
+  };
+
   if (!currentUser) {
     return null;
   }
@@ -94,6 +148,41 @@ const CreatePost = () => {
     setLoading(true);
     setError('');
 
+    // Debug: Log form data
+    console.log('Form data:', formData);
+    console.log('Current user:', currentUser);
+
+    // Validate required fields
+    if (!formData.title.trim()) {
+      setError('Vui lòng nhập tiêu đề bài đăng');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.description.trim()) {
+      setError('Vui lòng nhập mô tả');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.budget) {
+      setError('Vui lòng nhập ngân sách');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.contactName.trim()) {
+      setError('Vui lòng nhập tên liên hệ');
+      setLoading(false);
+      return;
+    }
+
+    if (!formData.contactPhone.trim()) {
+      setError('Vui lòng nhập số điện thoại');
+      setLoading(false);
+      return;
+    }
+
     try {
       const postData = {
         ...formData,
@@ -107,11 +196,19 @@ const CreatePost = () => {
         status: 'active'
       };
 
-      await postsService.createPost(postData);
-      navigate('/');
+      console.log('Creating post with data:', postData);
+      
+      const result = await postsService.createPost(postData);
+      console.log('Post created successfully:', result);
+      
+      // Show success message
+      alert('Đăng tin thành công!');
+      
+      // Force reload by using window.location instead of navigate
+      window.location.href = '/';
     } catch (err) {
-      setError('Có lỗi xảy ra khi đăng tin. Vui lòng thử lại.');
       console.error('Error creating post:', err);
+      setError('Có lỗi xảy ra khi đăng tin: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -526,6 +623,13 @@ const CreatePost = () => {
                 className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Hủy bỏ
+              </button>
+              <button
+                type="button"
+                onClick={testPost}
+                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+              >
+                Test Đăng tin
               </button>
               <button
                 type="submit"

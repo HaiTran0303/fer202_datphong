@@ -599,7 +599,7 @@ function SearchPosts() {
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-2xl font-bold text-blue-600">
-                        {formatPrice(post.price)}
+                                                        {formatPrice(post.budget || post.price)}
                       </span>
                       <span className="text-xs text-gray-500 flex items-center">
                         <Eye size={12} className="mr-1" />

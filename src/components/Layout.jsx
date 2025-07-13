@@ -1,10 +1,36 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { User, LogOut, FileText, Settings, ChevronDown } from 'lucide-react';
 
 const Layout = ({ children }) => {
   const location = useLocation();
   const { currentUser, logout } = useAuth();
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setShowUserDropdown(false);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -93,17 +119,63 @@ const Layout = ({ children }) => {
               </Link>
 
               {currentUser ? (
-                <>
-                  <span className="text-gray-600 text-sm">
-                    Xin chào, {currentUser.displayName || currentUser.email}
-                  </span>
+                <div className="relative" ref={dropdownRef}>
                   <button
-                    onClick={logout}
-                    className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
+                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                    className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
                   >
-                    Đăng xuất
+                    <User className="w-4 h-4" />
+                    <span>{currentUser.displayName || currentUser.email}</span>
+                    <ChevronDown className="w-4 h-4" />
                   </button>
-                </>
+
+                  {showUserDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                      <div className="py-1">
+                        <Link
+                          to="/profile"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <User className="w-4 h-4 mr-2" />
+                          Thông tin cá nhân
+                        </Link>
+                        <Link
+                          to="/my-posts"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Tin đăng của tôi
+                        </Link>
+                        <Link
+                          to="/settings"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Cài đặt
+                        </Link>
+                        <Link
+                          to="/debug"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <Settings className="w-4 h-4 mr-2" />
+                          Debug
+                        </Link>
+                        <hr className="my-1" />
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Đăng xuất
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <>
                   <Link 

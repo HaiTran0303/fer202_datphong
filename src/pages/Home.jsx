@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { postsService } from '../utils/firebase';
 import PostCard from '../components/PostCard';
 import SearchFilter from '../components/SearchFilter';
@@ -20,13 +20,10 @@ const Home = () => {
     'Đắk Lắk', 'Cà Mau', 'Thừa Thiên Huế', 'Kiên Giang', 'Lâm Đồng'
   ];
 
-  useEffect(() => {
-    loadPosts();
-  }, [filters, currentPage, sortBy]);
-
-  const loadPosts = async () => {
+  const loadPosts = useCallback(async () => {
     try {
       setLoading(true);
+      console.log('Loading posts with filters:', filters);
       const result = await postsService.getPosts({
         ...filters,
         page: currentPage,
@@ -34,16 +31,27 @@ const Home = () => {
         sortBy
       });
       
-      setPosts(result.posts);
-      setTotalPages(result.totalPages);
-      setTotalPosts(result.total);
+      console.log('Posts loaded:', result);
+      setPosts(result.posts || []);
+      setTotalPages(result.totalPages || 1);
+      setTotalPosts(result.total || 0);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải dữ liệu');
       console.error('Error loading posts:', err);
+      
+      // Fallback to empty state
+      setPosts([]);
+      setTotalPages(1);
+      setTotalPosts(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, currentPage, sortBy]);
+
+  useEffect(() => {
+    console.log('Home component: loading posts due to dependency change...');
+    loadPosts();
+  }, [loadPosts]);
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);

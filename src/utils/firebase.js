@@ -8,8 +8,7 @@ import {
   query, 
   where, 
   orderBy, 
-  limit, 
-  startAfter,
+  limit,
   getDoc,
   serverTimestamp,
   onSnapshot
@@ -29,7 +28,7 @@ export const postsService = {
       if (!db) {
         // Mock successful creation
         console.log('Mock post created:', postData);
-        return 'mock-post-' + Date.now();
+        return addMockPost(postData);
       }
       
       const docRef = await addDoc(collection(db, POSTS_COLLECTION), {
@@ -47,7 +46,7 @@ export const postsService = {
       // If Firebase error, simulate successful creation
       if (error.code === 'failed-precondition' || error.message.includes('index')) {
         console.warn('Using mock post creation due to Firebase limitations');
-        return 'mock-post-' + Date.now();
+        return addMockPost(postData);
       }
       
       throw error;
@@ -58,64 +57,38 @@ export const postsService = {
   async getPosts(options = {}) {
     try {
       // Handle both old and new calling patterns
-      let filters = {};
       let pageSize = 20;
-      let lastDoc = null;
       
       if (typeof options === 'object' && options.page) {
         // New pattern from Home.jsx
         const {
           limit = 20,
-          ...rest
         } = options;
-        filters = rest;
         pageSize = limit;
       } else {
         // Old pattern
         pageSize = options.pageSize || pageSize;
-        lastDoc = options.lastDoc || null;
-        filters = options.filters || options;
       }
       
       if (!db) {
-        // Return mock data when Firebase is not available
-        return {
-          posts: [],
-          totalPages: 1,
-          total: 0,
-          currentPage: options.page || 1
-        };
+        console.warn('Firebase not initialized - falling back to mock data');
+        return getMockPosts(options);
       }
+      
+      console.log('Firebase initialized successfully, attempting to query posts...');
       
       let q = collection(db, POSTS_COLLECTION);
       
-      // Apply filters - simplified to avoid composite index requirements
+      // Use simple query to avoid composite index requirements
       const queryConstraints = [];
       
-      // Always filter by status
-      queryConstraints.push(where('status', '==', 'active'));
-      
-      // Only apply one filter at a time to avoid composite index needs
-      if (filters.location) {
-        queryConstraints.push(where('location', '==', filters.location));
-      } else if (filters.category) {
-        queryConstraints.push(where('category', '==', filters.category));
-      } else if (filters.priceMin && !filters.priceMax) {
-        queryConstraints.push(where('price', '>=', filters.priceMin));
-      } else if (filters.priceMax && !filters.priceMin) {
-        queryConstraints.push(where('price', '<=', filters.priceMax));
-      }
-      
-      // Add orderBy last
+      // Only use orderBy and limit to avoid index issues
       queryConstraints.push(orderBy('createdAt', 'desc'));
-
-      // Add pagination
-      if (lastDoc) {
-        queryConstraints.push(startAfter(lastDoc));
-      }
       queryConstraints.push(limit(pageSize));
 
       q = query(q, ...queryConstraints);
+      
+      console.log('Attempting Firebase query...');
       
       const querySnapshot = await getDocs(q);
       let posts = [];
@@ -127,20 +100,7 @@ export const postsService = {
         });
       });
 
-      // Client-side filtering for complex filters that require composite index
-      if (filters.priceMin && filters.priceMax) {
-        posts = posts.filter(post => 
-          post.price >= filters.priceMin && post.price <= filters.priceMax
-        );
-      }
-      
-      if (filters.areaMin) {
-        posts = posts.filter(post => post.area >= filters.areaMin);
-      }
-      
-      if (filters.areaMax) {
-        posts = posts.filter(post => post.area <= filters.areaMax);
-      }
+      console.log(`Successfully loaded ${posts.length} posts from Firebase`);
 
       // Calculate pagination info
       const total = posts.length;
@@ -149,8 +109,7 @@ export const postsService = {
       
       return {
         posts,
-        lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
-        hasMore: querySnapshot.docs.length === pageSize,
+        hasMore: posts.length === pageSize,
         totalPages,
         total,
         currentPage
@@ -160,18 +119,13 @@ export const postsService = {
       
       // If it's an index error, return mock data to keep app working
       if (error.code === 'failed-precondition' || error.message.includes('index')) {
-        console.warn('Using mock data due to Firestore index requirements');
+        console.warn('Firebase index error - falling back to mock data');
         return getMockPosts(options);
       }
       
-      // Return safe fallback data for other errors
-      return {
-        posts: [],
-        totalPages: 1,
-        total: 0,
-        currentPage: options.page || 1,
-        hasMore: false
-      };
+      // For other Firebase errors, also use mock data but show warning
+      console.warn('Firebase error - falling back to mock data:', error.message);
+      return getMockPosts(options);
     }
   },
 
@@ -265,10 +219,30 @@ export const postsService = {
   // Delete post
   async deletePost(id) {
     try {
+      if (!db) {
+        // Delete from mock storage
+        const index = mockPostsStorage.findIndex(post => post.id === id);
+        if (index > -1) {
+          mockPostsStorage.splice(index, 1);
+          console.log('Mock post deleted:', id);
+          return true;
+        }
+        return false;
+      }
+
       const docRef = doc(db, POSTS_COLLECTION, id);
       await deleteDoc(docRef);
     } catch (error) {
       console.error('Error deleting post:', error);
+      
+      // Fallback to mock deletion
+      const index = mockPostsStorage.findIndex(post => post.id === id);
+      if (index > -1) {
+        mockPostsStorage.splice(index, 1);
+        console.log('Fallback mock post deleted:', id);
+        return true;
+      }
+      
       throw error;
     }
   },
@@ -304,9 +278,16 @@ export const postsService = {
   // Get posts by user
   async getPostsByUser(userId) {
     try {
+      if (!db) {
+        // Return mock posts for the user
+        const userPosts = mockPostsStorage.filter(post => post.authorId === userId);
+        console.log('Mock posts for user:', userId, userPosts);
+        return userPosts;
+      }
+
       const q = query(
         collection(db, POSTS_COLLECTION),
-        where('userId', '==', userId),
+        where('authorId', '==', userId),
         orderBy('createdAt', 'desc')
       );
       
@@ -323,7 +304,11 @@ export const postsService = {
       return posts;
     } catch (error) {
       console.error('Error getting user posts:', error);
-      throw error;
+      
+      // Fallback to mock data if Firebase fails
+      const userPosts = mockPostsStorage.filter(post => post.authorId === userId);
+      console.log('Fallback mock posts for user:', userId, userPosts);
+      return userPosts;
     }
   },
 
@@ -477,69 +462,91 @@ export const AREA_RANGES = [
 ];
 
 // Mock data function for fallback when Firestore index is missing
-const getMockPosts = (options = {}) => {
-  const mockPosts = [
-    {
-      id: 'mock1',
-      title: 'Tìm bạn nữ ghép trọ quận 1',
-      description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
-      price: 3500000,
-      location: 'Quận 1, Hồ Chí Minh',
-      district: 'Quận 1',
-      city: 'Hồ Chí Minh',
-      roomType: 'double',
-      gender: 'female',
-      type: 'roommate-search',
-      status: 'active',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorName: 'Minh Anh',
-      authorPhone: '0901234567',
-      images: ['/api/placeholder/400/300']
-    },
-    {
-      id: 'mock2',
-      title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
-      description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
-      price: 2800000,
-      location: 'Quận 3, Hồ Chí Minh',
-      district: 'Quận 3',
-      city: 'Hồ Chí Minh',
-      roomType: 'apartment',
-      gender: 'male',
-      type: 'roommate-search',
-      status: 'active',
-      createdAt: new Date(Date.now() - 172800000).toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorName: 'Việt Nam',
-      authorPhone: '0902345678',
-      images: ['/api/placeholder/400/300']
-    },
-    {
-      id: 'mock3',
-      title: 'Nữ tìm bạn ghép trọ quận Bình Thạnh',
-      description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
-      price: 3200000,
-      location: 'Quận Bình Thạnh, Hồ Chí Minh',
-      district: 'Quận Bình Thạnh',
-      city: 'Hồ Chí Minh',
-      roomType: 'single',
-      gender: 'female',
-      type: 'roommate-search',
-      status: 'active',
-      createdAt: new Date(Date.now() - 259200000).toISOString(),
-      updatedAt: new Date().toISOString(),
-      authorName: 'Thu Hà',
-      authorPhone: '0903456789',
-      images: ['/api/placeholder/400/300']
-    }
-  ];
+// Mock posts storage
+let mockPostsStorage = [
+  {
+    id: 'mock1',
+    title: 'Tìm bạn nữ ghép trọ quận 1',
+    description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
+    price: 3500000,
+    budget: 3500000,
+    location: 'Quận 1, Hồ Chí Minh',
+    district: 'Quận 1',
+    city: 'Hồ Chí Minh',
+    roomType: 'double',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0901234567',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock2',
+    title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
+    description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
+    price: 2800000,
+    budget: 2800000,
+    location: 'Quận 3, Hồ Chí Minh',
+    district: 'Quận 3',
+    city: 'Hồ Chí Minh',
+    roomType: 'apartment',
+    gender: 'male',
+    genderPreference: 'male',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'other-user-456', // Other user's posts
+    authorName: 'Việt Nam',
+    authorPhone: '0902345678',
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock3',
+    title: 'Demo Post - Tìm bạn ghép trọ quận Bình Thạnh',
+    description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
+    price: 3200000,
+    budget: 3200000,
+    location: 'Quận Bình Thạnh, Hồ Chí Minh',
+    district: 'Quận Bình Thạnh',
+    city: 'Hồ Chí Minh',
+    roomType: 'single',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0903456789',
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  }
+];
 
+const getMockPosts = (options = {}) => {
   return {
-    posts: mockPosts,
+    posts: mockPostsStorage,
     totalPages: 1,
-    total: mockPosts.length,
+    total: mockPostsStorage.length,
     currentPage: options.page || 1,
     hasMore: false
   };
+};
+
+// Function to add mock post
+const addMockPost = (postData) => {
+  const mockPost = {
+    id: 'mock-' + Date.now(),
+    ...postData,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  mockPostsStorage.unshift(mockPost); // Add to beginning
+  return mockPost.id;
 }; 

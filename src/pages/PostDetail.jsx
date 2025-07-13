@@ -124,7 +124,7 @@ function PostDetail() {
       try {
         await navigator.share({
           title: post.title,
-          text: `${post.title} - ${formatPrice(post.price)}`,
+          text: `${post.title} - ${formatPrice(post.budget || post.price)}`,
           url: window.location.href
         });
       } catch (error) {
@@ -354,7 +354,7 @@ function PostDetail() {
             <div className="flex items-center space-x-6 mb-6">
               <div className="flex items-center text-blue-600">
                 <DollarSign size={20} className="mr-1" />
-                <span className="text-2xl font-bold">{formatPrice(post.price)}/tháng</span>
+                <span className="text-2xl font-bold">{formatPrice(post.budget || post.price)}/tháng</span>
               </div>
               
               <div className="flex items-center text-gray-600">
