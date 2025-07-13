@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { postsService } from '../utils/firebase';
 import { 
   Search, 
   Filter, 
@@ -45,158 +46,6 @@ function SearchPosts() {
 
   const postsPerPage = 9;
 
-  // Mock data for demonstration
-  const mockPosts = [
-    {
-      id: 1,
-      title: "Tìm bạn nữ ghép trọ quận 1",
-      description: "Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên. Tìm bạn nữ sạch sẽ, thân thiện.",
-      price: 3500000,
-      location: "123 Nguyễn Huệ",
-      district: "Quận 1",
-      city: "Hồ Chí Minh",
-      roomType: "double",
-      gender: "female",
-      maxPeople: 2,
-      availableFrom: "2024-02-01",
-      amenities: ["wifi", "ac", "washing", "security"],
-      rules: ["Không hút thuốc", "Giữ yên tĩnh sau 22h", "Dọn dẹp chung"],
-      school: "Đại học Khoa học Tự nhiên",
-      major: "Công nghệ thông tin",
-      interests: ["Đọc sách", "Yoga", "Học ngoại ngữ"],
-      lifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Minh Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: true
-      },
-      createdAt: "2024-01-15T10:30:00Z",
-      views: 145,
-      likes: 12
-    },
-    {
-      id: 2,
-      title: "Nam tìm bạn cùng phòng gần ĐH Bách Khoa",
-      description: "Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học và các tiện ích.",
-      price: 2800000,
-      location: "456 Võ Văn Ngân",
-      district: "Quận 3",
-      city: "Hồ Chí Minh",
-      roomType: "apartment",
-      gender: "male",
-      maxPeople: 2,
-      availableFrom: "2024-02-15",
-      amenities: ["wifi", "kitchen", "parking", "elevator"],
-      rules: ["Không tiệc tùng", "Chia sẻ chi phí sinh hoạt"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Việt Nam",
-        avatar: "/api/placeholder/40/40",
-        verified: false
-      },
-      createdAt: "2024-01-14T15:45:00Z",
-      views: 203,
-      likes: 8
-    },
-    {
-      id: 3,
-      title: "Nữ tìm bạn ghép trọ quận Bình Thạnh",
-      description: "Phòng trọ yên tĩnh, an ninh tốt, gần chợ và trường học. Phù hợp cho sinh viên nghiêm túc.",
-      price: 3200000,
-      location: "789 Xô Viết Nghệ Tĩnh",
-      district: "Quận Bình Thạnh",
-      city: "Hồ Chí Minh",
-      roomType: "single",
-      gender: "female",
-      maxPeople: 2,
-      availableFrom: "2024-01-25",
-      amenities: ["wifi", "ac", "washing"],
-      rules: ["Không hút thuốc", "Không uống rượu", "Học tập nhiều"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Thu Hà",
-        avatar: "/api/placeholder/40/40",
-        verified: true
-      },
-      createdAt: "2024-01-13T09:20:00Z",
-      views: 98,
-      likes: 15
-    },
-    {
-      id: 4,
-      title: "Tìm bạn ở ghép studio quận 7",
-      description: "Studio mới xây, view đẹp, đầy đủ tiện nghi hiện đại. Phù hợp cho 2 người bạn thân.",
-      price: 4500000,
-      location: "321 Nguyễn Thị Thập",
-      district: "Quận 7",
-      city: "Hồ Chí Minh",
-      roomType: "studio",
-      gender: "",
-      maxPeople: 2,
-      availableFrom: "2024-02-10",
-      amenities: ["wifi", "ac", "washing", "kitchen", "elevator", "security"],
-      rules: ["Sạch sẽ", "Thân thiện", "Không tiệc tùng"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Quang Minh",
-        avatar: "/api/placeholder/40/40",
-        verified: true
-      },
-      createdAt: "2024-01-12T14:15:00Z",
-      views: 267,
-      likes: 23
-    },
-    {
-      id: 5,
-      title: "Phòng trọ sinh viên quận 10",
-      description: "Phòng trọ giá rẻ, phù hợp sinh viên, gần trường ĐH Công nghiệp. Môi trường học tập tốt.",
-      price: 2200000,
-      location: "654 Sư Vạn Hạnh",
-      district: "Quận 10",
-      city: "Hồ Chí Minh",
-      roomType: "dorm",
-      gender: "",
-      maxPeople: 4,
-      availableFrom: "2024-01-30",
-      amenities: ["wifi", "washing"],
-      rules: ["Học tập nhiều", "Giữ yên tĩnh", "Dọn dẹp chung"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Hoàng Long",
-        avatar: "/api/placeholder/40/40",
-        verified: false
-      },
-      createdAt: "2024-01-11T11:30:00Z",
-      views: 156,
-      likes: 9
-    },
-    {
-      id: 6,
-      title: "Căn hộ 2 phòng ngủ quận 2",
-      description: "Căn hộ mới, đầy đủ nội thất, view sông, gần khu Thủ Thiêm. Tìm 1 bạn chia sẻ.",
-      price: 5000000,
-      location: "888 Đỗ Xuân Hợp",
-      district: "Quận 2",
-      city: "Hồ Chí Minh",
-      roomType: "apartment",
-      gender: "",
-      maxPeople: 2,
-      availableFrom: "2024-02-05",
-      amenities: ["wifi", "ac", "washing", "kitchen", "elevator", "security", "parking"],
-      rules: ["Sạch sẽ", "Thân thiện", "Chia sẻ chi phí"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Phương Linh",
-        avatar: "/api/placeholder/40/40",
-        verified: true
-      },
-      createdAt: "2024-01-10T16:45:00Z",
-      views: 189,
-      likes: 18
-    }
-  ];
-
   const amenitiesOptions = [
     { id: 'wifi', label: 'WiFi', icon: <Wifi size={16} /> },
     { id: 'parking', label: 'Chỗ đậu xe', icon: <Car size={16} /> },
@@ -219,51 +68,36 @@ function SearchPosts() {
     fetchPosts();
   }, [searchTerm, filters, sortBy]);
 
-  const fetchPosts = () => {
+  const fetchPosts = async () => {
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      let filteredPosts = mockPosts.filter(post => {
-        const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             post.description.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        const matchesPrice = (!filters.priceMin || post.price >= parseInt(filters.priceMin)) &&
-                             (!filters.priceMax || post.price <= parseInt(filters.priceMax));
-        
-        const matchesDistrict = !filters.district || post.district === filters.district;
-        const matchesGender = !filters.gender || post.gender === filters.gender || !post.gender;
-        const matchesRoomType = !filters.roomType || post.roomType === filters.roomType;
-        const matchesSchool = !filters.school || post.school?.toLowerCase().includes(filters.school.toLowerCase());
-        const matchesMajor = !filters.major || post.major === filters.major;
-        
-        const matchesAmenities = filters.amenities.length === 0 || 
-                                filters.amenities.every(amenity => post.amenities.includes(amenity));
+    try {
+      // Prepare search filters for Firebase
+      const searchFilters = {
+        searchTerm: searchTerm,
+        priceMin: filters.priceMin ? parseInt(filters.priceMin) : undefined,
+        priceMax: filters.priceMax ? parseInt(filters.priceMax) : undefined,
+        district: filters.district || undefined,
+        genderPreference: filters.gender || undefined,
+        roomType: filters.roomType || undefined,
+        school: filters.school || undefined,
+        major: filters.major || undefined,
+        interests: filters.interests || undefined,
+        lifestyle: filters.lifestyle || undefined,
+        sortBy: sortBy
+      };
 
-        return matchesSearch && matchesPrice && matchesDistrict && matchesGender && matchesRoomType && matchesSchool && matchesMajor && matchesAmenities;
-      });
-
-      // Sort posts
-      filteredPosts.sort((a, b) => {
-        switch (sortBy) {
-          case 'newest':
-            return new Date(b.createdAt) - new Date(a.createdAt);
-          case 'oldest':
-            return new Date(a.createdAt) - new Date(b.createdAt);
-          case 'price-low':
-            return a.price - b.price;
-          case 'price-high':
-            return b.price - a.price;
-          case 'popular':
-            return b.views - a.views;
-          default:
-            return 0;
-        }
-      });
-
-      setPosts(filteredPosts);
+      console.log('Searching posts with filters:', searchFilters);
+      const result = await postsService.getPosts(searchFilters);
+      console.log('Search results:', result);
+      
+      setPosts(result.posts || []);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      setPosts([]);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const handleFilterChange = (filterType, value) => {

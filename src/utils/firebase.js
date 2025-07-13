@@ -132,40 +132,61 @@ export const postsService = {
   // Search posts
   async searchPosts(searchTerm, filters = {}) {
     try {
-      let q = collection(db, POSTS_COLLECTION);
-      
-      const queryConstraints = [
-        where('status', '==', 'active'),
+      if (!db) {
+        console.warn('Firebase not initialized - falling back to mock data');
+        return getMockPosts(filters);
+      }
+
+      // Use simple query to avoid composite index requirement
+      const q = query(
+        collection(db, POSTS_COLLECTION),
         orderBy('createdAt', 'desc')
-      ];
-
-      // Apply filters (same as getPosts)
-      if (filters.minPrice) {
-        queryConstraints.push(where('price', '>=', filters.minPrice));
-      }
-      if (filters.maxPrice) {
-        queryConstraints.push(where('price', '<=', filters.maxPrice));
-      }
-      if (filters.location) {
-        queryConstraints.push(where('location', '==', filters.location));
-      }
-      if (filters.category) {
-        queryConstraints.push(where('category', '==', filters.category));
-      }
-
-      q = query(q, ...queryConstraints);
+      );
       
       const querySnapshot = await getDocs(q);
       const posts = [];
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Client-side search in title and description
-        if (data.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            data.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        
+        // Client-side filtering
+        let matchesFilter = true;
+        
+        // Status filter
+        if (data.status !== 'active') {
+          matchesFilter = false;
+        }
+        
+        // Price filters
+        if (filters.minPrice && data.budget < filters.minPrice) {
+          matchesFilter = false;
+        }
+        if (filters.maxPrice && data.budget > filters.maxPrice) {
+          matchesFilter = false;
+        }
+        
+        // Location filter
+        if (filters.location && data.location !== filters.location) {
+          matchesFilter = false;
+        }
+        
+        // Category filter
+        if (filters.category && data.category !== filters.category) {
+          matchesFilter = false;
+        }
+        
+        // Search term filter
+        if (searchTerm && !data.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
+            !data.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+          matchesFilter = false;
+        }
+        
+        if (matchesFilter) {
           posts.push({
             id: doc.id,
-            ...data
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt
           });
         }
       });
@@ -173,13 +194,22 @@ export const postsService = {
       return posts;
     } catch (error) {
       console.error('Error searching posts:', error);
-      throw error;
+      
+      // Fallback to mock data
+      console.warn('Falling back to mock data due to search error');
+      return getMockPosts(filters);
     }
   },
 
   // Get single post
   async getPost(id) {
     try {
+      if (!db) {
+        // Fallback to mock data
+        const post = mockPostsStorage.find(p => p.id === id);
+        return post || null;
+      }
+      
       const docRef = doc(db, POSTS_COLLECTION, id);
       const docSnap = await getDoc(docRef);
       
@@ -189,17 +219,28 @@ export const postsService = {
           views: (docSnap.data().views || 0) + 1
         });
         
+        const data = docSnap.data();
         return {
           id: docSnap.id,
-          ...docSnap.data()
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt
         };
       } else {
-        throw new Error('Post not found');
+        return null;
       }
     } catch (error) {
       console.error('Error getting post:', error);
-      throw error;
+      
+      // Fallback to mock data
+      const post = mockPostsStorage.find(p => p.id === id);
+      return post || null;
     }
+  },
+
+  // Alias for getPost - used by PostDetail
+  async getPostById(id) {
+    return this.getPost(id);
   },
 
   // Update post
@@ -285,22 +326,32 @@ export const postsService = {
         return userPosts;
       }
 
+      console.log('Fetching posts for user:', userId);
+      
+      // Use simple query to avoid composite index requirement
       const q = query(
         collection(db, POSTS_COLLECTION),
-        where('authorId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('authorId', '==', userId)
       );
       
       const querySnapshot = await getDocs(q);
       const posts = [];
       
       querySnapshot.forEach((doc) => {
+        const data = doc.data();
         posts.push({
           id: doc.id,
-          ...doc.data()
+          ...data,
+          // Convert Firebase timestamp to ISO string if needed
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : data.updatedAt
         });
       });
 
+      // Sort by createdAt on client side to avoid index requirement
+      posts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      console.log('Posts loaded for user:', userId, posts);
       return posts;
     } catch (error) {
       console.error('Error getting user posts:', error);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { postsService } from '../utils/firebase';
 import { 
   Brain, 
   Star, 
@@ -36,169 +37,7 @@ function Suggestions() {
     lifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều"]
   };
 
-  // Mock suggestions data
-  const mockSuggestions = [
-    {
-      id: 1,
-      title: "Tìm bạn nữ ghép trọ quận 1",
-      description: "Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.",
-      price: 3500000,
-      location: "123 Nguyễn Huệ",
-      district: "Quận 1",
-      city: "Hồ Chí Minh",
-      roomType: "double",
-      gender: "female",
-      maxPeople: 2,
-      availableFrom: "2024-02-01",
-      amenities: ["wifi", "ac", "washing", "security"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Minh Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        commonInterests: ["Đọc sách", "Yoga"],
-        lifestyle: ["Sạch sẽ", "Yên tĩnh"]
-      },
-      createdAt: "2024-01-15T10:30:00Z",
-      views: 145,
-      likes: 12,
-      matchScore: 95,
-      matchReasons: [
-        "Cùng giới tính và ngân sách phù hợp",
-        "Có 2 sở thích chung",
-        "Lối sống tương đồng",
-        "Vị trí gần trường học"
-      ]
-    },
-    {
-      id: 2,
-      title: "Nữ tìm bạn ghép trọ quận Bình Thạnh",
-      description: "Phòng trọ yên tĩnh, an ninh tốt, phù hợp cho sinh viên nghiêm túc.",
-      price: 3200000,
-      location: "789 Xô Viết Nghệ Tĩnh",
-      district: "Quận Bình Thạnh",
-      city: "Hồ Chí Minh",
-      roomType: "single",
-      gender: "female",
-      maxPeople: 2,
-      availableFrom: "2024-01-25",
-      amenities: ["wifi", "ac", "washing"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Thu Hà",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        commonInterests: ["Đọc sách", "Xem phim"],
-        lifestyle: ["Yên tĩnh", "Học tập nhiều"]
-      },
-      createdAt: "2024-01-13T09:20:00Z",
-      views: 98,
-      likes: 15,
-      matchScore: 88,
-      matchReasons: [
-        "Ngân sách phù hợp",
-        "Có 2 sở thích chung",
-        "Lối sống học tập nghiêm túc",
-        "Môi trường yên tĩnh"
-      ]
-    },
-    {
-      id: 3,
-      title: "Studio mới xây quận 7",
-      description: "Studio đẹp, view sông, đầy đủ tiện nghi hiện đại.",
-      price: 4000000,
-      location: "321 Nguyễn Thị Thập",
-      district: "Quận 7",
-      city: "Hồ Chí Minh",
-      roomType: "studio",
-      gender: "",
-      maxPeople: 2,
-      availableFrom: "2024-02-10",
-      amenities: ["wifi", "ac", "washing", "kitchen", "elevator"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Quang Minh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        commonInterests: ["Xem phim"],
-        lifestyle: ["Sạch sẽ"]
-      },
-      createdAt: "2024-01-12T14:15:00Z",
-      views: 267,
-      likes: 23,
-      matchScore: 82,
-      matchReasons: [
-        "Chất lượng phòng cao",
-        "Có 1 sở thích chung",
-        "Lối sống tương đồng",
-        "Tiện ích đầy đủ"
-      ]
-    },
-    {
-      id: 4,
-      title: "Phòng trọ sinh viên quận 3",
-      description: "Gần trường ĐH Bách Khoa, môi trường học tập tốt.",
-      price: 2800000,
-      location: "456 Võ Văn Ngân",
-      district: "Quận 3",
-      city: "Hồ Chí Minh",
-      roomType: "double",
-      gender: "female",
-      maxPeople: 2,
-      availableFrom: "2024-02-15",
-      amenities: ["wifi", "kitchen", "washing"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Lan Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: false,
-        commonInterests: ["Đọc sách"],
-        lifestyle: ["Học tập nhiều"]
-      },
-      createdAt: "2024-01-14T15:45:00Z",
-      views: 203,
-      likes: 8,
-      matchScore: 78,
-      matchReasons: [
-        "Ngân sách thấp hơn dự kiến",
-        "Có 1 sở thích chung",
-        "Môi trường học tập tốt",
-        "Gần trường học"
-      ]
-    },
-    {
-      id: 5,
-      title: "Căn hộ cao cấp quận 2",
-      description: "Căn hộ mới, view đẹp, đầy đủ nội thất.",
-      price: 5000000,
-      location: "888 Đỗ Xuân Hợp",
-      district: "Quận 2",
-      city: "Hồ Chí Minh",
-      roomType: "apartment",
-      gender: "",
-      maxPeople: 2,
-      availableFrom: "2024-02-05",
-      amenities: ["wifi", "ac", "washing", "kitchen", "elevator", "security"],
-      images: ["/api/placeholder/400/300"],
-      author: {
-        name: "Phương Linh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        commonInterests: ["Yoga"],
-        lifestyle: ["Sạch sẽ"]
-      },
-      createdAt: "2024-01-10T16:45:00Z",
-      views: 189,
-      likes: 18,
-      matchScore: 75,
-      matchReasons: [
-        "Chất lượng cao",
-        "Có 1 sở thích chung",
-        "Lối sống tương đồng",
-        "Tiện ích đầy đủ"
-      ]
-    }
-  ];
+
 
   useEffect(() => {
     fetchSuggestions();
@@ -207,30 +46,76 @@ function Suggestions() {
   const fetchSuggestions = async () => {
     setLoading(true);
     
-    // Simulate AI processing
-    setTimeout(() => {
-      // Sort by match score
-      const sortedSuggestions = [...mockSuggestions].sort((a, b) => b.matchScore - a.matchScore);
+    try {
+      // Get all posts from Firebase
+      const result = await postsService.getPosts({});
+      const allPosts = result.posts || [];
+      
+      // Calculate match scores based on user preferences
+      const postsWithScores = allPosts.map(post => {
+        let matchScore = 0;
+        
+        // Budget compatibility (30% weight)
+        if (post.budget && userPreferences.budget) {
+          const budgetDiff = Math.abs(post.budget - userPreferences.budget);
+          const budgetScore = Math.max(0, 100 - (budgetDiff / userPreferences.budget * 100));
+          matchScore += budgetScore * 0.3;
+        }
+        
+        // District match (25% weight)
+        if (post.district === userPreferences.district) {
+          matchScore += 25;
+        }
+        
+        // Gender compatibility (20% weight)
+        if (post.genderPreference === userPreferences.gender || !post.genderPreference) {
+          matchScore += 20;
+        }
+        
+        // Room type match (15% weight)
+        if (post.roomType === userPreferences.roomType) {
+          matchScore += 15;
+        }
+        
+        // Interests overlap (10% weight)
+        if (post.interests && userPreferences.interests) {
+          const commonInterests = post.interests.filter(interest => 
+            userPreferences.interests.includes(interest)
+          );
+          matchScore += (commonInterests.length / userPreferences.interests.length) * 10;
+        }
+        
+        return {
+          ...post,
+          matchScore: Math.min(100, Math.max(0, matchScore))
+        };
+      });
+      
+      // Sort by match score and filter out low scores
+      const sortedSuggestions = postsWithScores
+        .filter(post => post.matchScore > 30)
+        .sort((a, b) => b.matchScore - a.matchScore);
+      
       setSuggestions(sortedSuggestions);
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      setSuggestions([]);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   const refreshSuggestions = async () => {
     setRefreshing(true);
     
-    // Simulate generating new suggestions
-    setTimeout(() => {
-      // Shuffle and re-score
-      const shuffled = [...mockSuggestions].sort(() => Math.random() - 0.5);
-      const rescored = shuffled.map(item => ({
-        ...item,
-        matchScore: Math.max(60, Math.floor(Math.random() * 40) + 60)
-      }));
-      
-      setSuggestions(rescored.sort((a, b) => b.matchScore - a.matchScore));
+    try {
+      // Re-fetch suggestions from Firebase
+      await fetchSuggestions();
+    } catch (error) {
+      console.error('Error refreshing suggestions:', error);
+    } finally {
       setRefreshing(false);
-    }, 2000);
+    }
   };
 
   const toggleFavorite = (postId) => {

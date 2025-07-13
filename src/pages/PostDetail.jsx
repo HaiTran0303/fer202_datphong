@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { postsService } from '../utils/firebase';
 import { 
   MapPin, 
   DollarSign, 
@@ -40,49 +41,7 @@ function PostDetail() {
   const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  // Mock data - in real app, fetch from API
-  const mockPost = {
-    id: 1,
-    title: "Tìm bạn nữ ghép trọ quận 1",
-    description: "Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên. Tìm bạn nữ sạch sẽ, thân thiện. Phòng có diện tích 25m2, đầy đủ nội thất, máy lạnh, wifi miễn phí. Vị trí thuận lợi di chuyển, gần trường học, chợ, siêu thị. Môi trường an toàn, yên tĩnh phù hợp cho việc học tập.",
-    price: 3500000,
-    location: "123 Nguyễn Huệ",
-    district: "Quận 1",
-    city: "Hồ Chí Minh",
-    roomType: "double",
-    gender: "female",
-    maxPeople: 2,
-    availableFrom: "2024-02-01",
-    amenities: ["wifi", "ac", "washing", "security"],
-    rules: ["Không hút thuốc", "Giữ yên tĩnh sau 22h", "Dọn dẹp chung", "Không uống rượu"],
-    images: [
-      "/api/placeholder/800/600",
-      "/api/placeholder/800/600",
-      "/api/placeholder/800/600",
-      "/api/placeholder/800/600"
-    ],
-    author: {
-      id: "user123",
-      name: "Minh Anh",
-      avatar: "/api/placeholder/60/60",
-      verified: true,
-      phone: "0123456789",
-      email: "minhanh@example.com",
-      joinDate: "2023-06-15",
-      responseRate: 95,
-      responseTime: "trong vòng 1 giờ"
-    },
-    createdAt: "2024-01-15T10:30:00Z",
-    views: 145,
-    likes: 12,
-    additionalInfo: {
-      area: "25m2",
-      floor: "Tầng 3",
-      deposit: 3500000,
-      utilities: "Điện, nước, internet",
-      nearby: ["Trường ĐH Khoa học Tự nhiên", "Chợ Bến Thành", "Ga Metro", "Siêu thị CoopMart"]
-    }
-  };
+
 
   const amenitiesLabels = {
     wifi: 'WiFi',
@@ -112,11 +71,29 @@ function PostDetail() {
 
   const fetchPost = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setPost(mockPost);
+    
+    try {
+      if (!id) {
+        navigate('/');
+        return;
+      }
+      
+      // Get post from Firebase
+      const postData = await postsService.getPostById(id);
+      
+      if (!postData) {
+        console.error('Post not found');
+        navigate('/');
+        return;
+      }
+      
+      setPost(postData);
+    } catch (error) {
+      console.error('Error fetching post:', error);
+      navigate('/');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleShare = async () => {
