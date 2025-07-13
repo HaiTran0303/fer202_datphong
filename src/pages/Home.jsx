@@ -77,16 +77,16 @@ const Home = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex gap-6">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Content */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {/* Page Title */}
           <h1 className="text-xl font-semibold text-gray-900 mb-4">
             Cho thuê phòng trọ, nhà nguyên căn, căn hộ
           </h1>
           <p className="text-sm text-gray-600 mb-6">
-            Hiện có <span className="font-semibold text-orange-500">{totalPosts.toLocaleString()}</span> tin đăng
+            Hiện có <span className="font-semibold text-orange-500">{(totalPosts || 0).toLocaleString()}</span> tin đăng
           </p>
 
           {/* Province Filter */}
@@ -207,7 +207,7 @@ const Home = () => {
         </div>
 
         {/* Sidebar */}
-        <div className="w-80 space-y-6">
+        <div className="w-full lg:w-80 lg:flex-shrink-0 space-y-6">
           {/* Search Filter */}
           <SearchFilter onFilterChange={handleFilterChange} />
 

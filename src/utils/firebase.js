@@ -42,8 +42,38 @@ export const postsService = {
   },
 
   // Get all posts with pagination
-  async getPosts(pageSize = 10, lastDoc = null, filters = {}) {
+  async getPosts(options = {}) {
     try {
+      // Handle both old and new calling patterns
+      let filters = {};
+      let pageSize = 20;
+      let lastDoc = null;
+      
+      if (typeof options === 'object' && options.page) {
+        // New pattern from Home.jsx
+        const {
+          limit = 20,
+          ...rest
+        } = options;
+        filters = rest;
+        pageSize = limit;
+      } else {
+        // Old pattern
+        pageSize = options.pageSize || pageSize;
+        lastDoc = options.lastDoc || null;
+        filters = options.filters || options;
+      }
+      
+      if (!db) {
+        // Return mock data when Firebase is not available
+        return {
+          posts: [],
+          totalPages: 1,
+          total: 0,
+          currentPage: options.page || 1
+        };
+      }
+      
       let q = collection(db, POSTS_COLLECTION);
       
       // Apply filters
@@ -53,19 +83,19 @@ export const postsService = {
       ];
 
       // Price filter
-      if (filters.minPrice) {
-        queryConstraints.push(where('price', '>=', filters.minPrice));
+      if (filters.priceMin) {
+        queryConstraints.push(where('price', '>=', filters.priceMin));
       }
-      if (filters.maxPrice) {
-        queryConstraints.push(where('price', '<=', filters.maxPrice));
+      if (filters.priceMax) {
+        queryConstraints.push(where('price', '<=', filters.priceMax));
       }
 
       // Area filter
-      if (filters.minArea) {
-        queryConstraints.push(where('area', '>=', filters.minArea));
+      if (filters.areaMin) {
+        queryConstraints.push(where('area', '>=', filters.areaMin));
       }
-      if (filters.maxArea) {
-        queryConstraints.push(where('area', '<=', filters.maxArea));
+      if (filters.areaMax) {
+        queryConstraints.push(where('area', '<=', filters.areaMax));
       }
 
       // Location filter
@@ -96,14 +126,29 @@ export const postsService = {
         });
       });
 
+      // Calculate pagination info
+      const total = posts.length; // This is a simplified approach
+      const currentPage = options.page || 1;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      
       return {
         posts,
         lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
-        hasMore: querySnapshot.docs.length === pageSize
+        hasMore: querySnapshot.docs.length === pageSize,
+        totalPages,
+        total,
+        currentPage
       };
     } catch (error) {
       console.error('Error getting posts:', error);
-      throw error;
+      // Return safe fallback data instead of throwing
+      return {
+        posts: [],
+        totalPages: 1,
+        total: 0,
+        currentPage: options.page || 1,
+        hasMore: false
+      };
     }
   },
 

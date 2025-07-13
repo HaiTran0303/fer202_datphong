@@ -24,7 +24,7 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { signup, updateUserProfile } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -80,8 +80,10 @@ function Register() {
     try {
       setError('');
       setLoading(true);
-      await signup(formData.email, formData.password);
-      await updateUserProfile(formData.fullName, null);
+      await register(formData.email, formData.password, {
+        fullName: formData.fullName,
+        phone: formData.phone
+      });
       navigate('/');
     } catch (err) {
       console.error('Registration error:', err);

@@ -245,9 +245,7 @@ function Suggestions() {
     return (price / 1000000).toFixed(1) + ' triệu';
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('vi-VN');
-  };
+
 
   const getRoomTypeLabel = (roomType) => {
     const types = {
