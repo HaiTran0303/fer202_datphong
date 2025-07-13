@@ -21,7 +21,6 @@ function Login() {
       ...formData,
       [e.target.name]: e.target.value
     });
-    // Clear error when user starts typing
     if (error) {
       setError('');
     }
@@ -59,7 +58,6 @@ function Login() {
       setLoading(true);
       await login(formData.email, formData.password);
       
-      // Save remember me preference
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
@@ -68,7 +66,6 @@ function Login() {
     } catch (err) {
       console.error('Login error:', err);
       
-      // More specific error messages
       let errorMessage = 'Đăng nhập thất bại';
       
       if (err.code === 'auth/user-not-found') {
@@ -91,41 +88,36 @@ function Login() {
     }
   };
 
-  const handleSocialLogin = (provider) => {
-    // For demo purposes, show a message
-    setError(`Đăng nhập với ${provider} sẽ được triển khai trong phiên bản tiếp theo`);
-  };
-
-  const handleForgotPassword = () => {
-    // For demo purposes, show a message
-    setError('Tính năng quên mật khẩu sẽ được triển khai trong phiên bản tiếp theo');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-          Đăng nhập vào RoomMate
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Hoặc{' '}
-          <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
-            tạo tài khoản mới
-          </Link>
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <div className="flex justify-center">
+            <Link to="/" className="flex items-center">
+              <div className="w-10 h-10 bg-white rounded mr-3 flex items-center justify-center border">
+                <span className="text-blue-600 font-bold">F</span>
+              </div>
+              <span className="text-2xl font-bold text-gray-800">FPTRO</span>
+            </Link>
+          </div>
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+            Đăng nhập
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Hoặc{' '}
+            <Link
+              to="/register"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
+              đăng ký tài khoản mới
+            </Link>
+          </p>
+        </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}
-              <button
-                onClick={() => setError('')}
-                className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-              >
-                ×
-              </button>
             </div>
           )}
           
@@ -134,8 +126,10 @@ function Login() {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
               </label>
-              <div className="mt-1 relative">
-                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="email"
                   name="email"
@@ -143,7 +137,7 @@ function Login() {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   placeholder="your@email.com"
                 />
               </div>
@@ -153,8 +147,10 @@ function Login() {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Mật khẩu
               </label>
-              <div className="mt-1 relative">
-                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="password"
                   name="password"
@@ -162,16 +158,18 @@ function Login() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Mật khẩu"
+                  className="appearance-none block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="••••••••"
                 />
-                <button
-                  type="button"
-                  className="absolute right-3 top-3 h-5 w-5 text-gray-400 hover:text-gray-600"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -191,13 +189,12 @@ function Login() {
               </div>
 
               <div className="text-sm">
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
+                <Link
+                  to="/forgot-password"
                   className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Quên mật khẩu?
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -205,7 +202,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
               </button>
@@ -223,19 +220,21 @@ function Login() {
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleSocialLogin('Google')}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <span className="sr-only">Đăng nhập với Google</span>
-                Google
+              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+                <span className="ml-2">Google</span>
               </button>
-              <button
-                onClick={() => handleSocialLogin('Facebook')}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <span className="sr-only">Đăng nhập với Facebook</span>
-                Facebook
+
+              <button className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+                <span className="ml-2">Facebook</span>
               </button>
             </div>
           </div>
