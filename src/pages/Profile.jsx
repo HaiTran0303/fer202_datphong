@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Phone, School, MapPin, Edit, Save, X, Camera, Star, Heart, Home } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { User, Mail, Phone, School, MapPin, Edit, Save, X, Camera, Star, Heart, Home, CheckCircle, Upload } from 'lucide-react';
 
 function Profile() {
   const { currentUser, updateUserProfile } = useAuth();
@@ -26,16 +28,50 @@ function Profile() {
       lifestyle: []
     }
   });
+  const [userStats, setUserStats] = useState({
+    postsCount: 0,
+    connectionsCount: 0,
+    rating: 0
+  });
 
   useEffect(() => {
     if (currentUser) {
-      setProfileData(prev => ({
-        ...prev,
-        fullName: currentUser.displayName || '',
-        email: currentUser.email || '',
-      }));
+      loadUserProfile();
     }
   }, [currentUser]);
+
+  const loadUserProfile = async () => {
+    try {
+      if (!currentUser || !db) return;
+      
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        setProfileData(prev => ({
+          ...prev,
+          ...userData,
+          fullName: userData.fullName || currentUser.displayName || '',
+          email: userData.email || currentUser.email || '',
+        }));
+        
+        // Load user stats
+        setUserStats({
+          postsCount: userData.postsCount || 0,
+          connectionsCount: userData.connectionsCount || 0,
+          rating: userData.rating || 0
+        });
+      } else {
+        // Initialize with basic info if no profile exists
+        setProfileData(prev => ({
+          ...prev,
+          fullName: currentUser.displayName || '',
+          email: currentUser.email || '',
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -80,7 +116,18 @@ function Profile() {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await updateUserProfile(profileData.fullName, null);
+      
+      if (currentUser && db) {
+        // Save to Firestore
+        await setDoc(doc(db, 'users', currentUser.uid), {
+          ...profileData,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        // Update Firebase Auth profile
+        await updateUserProfile(profileData.fullName, null);
+      }
+      
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update profile:', error);
@@ -127,12 +174,31 @@ function Profile() {
                 <Camera size={16} />
               </button>
             </div>
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold">
                 {profileData.fullName || 'Chưa cập nhật tên'}
               </h1>
               <p className="text-blue-100">{profileData.email}</p>
               <p className="text-blue-100">{profileData.school || 'Chưa cập nhật trường'}</p>
+              
+              {/* Stats */}
+              <div className="flex space-x-6 mt-4">
+                <div className="text-center">
+                  <div className="text-xl font-bold">{userStats.postsCount}</div>
+                  <div className="text-blue-100 text-sm">Bài đăng</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold">{userStats.connectionsCount}</div>
+                  <div className="text-blue-100 text-sm">Kết nối</div>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center text-xl font-bold">
+                    {userStats.rating}
+                    <Star size={16} className="ml-1" fill="currentColor" />
+                  </div>
+                  <div className="text-blue-100 text-sm">Đánh giá</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -225,6 +291,12 @@ function Profile() {
                       <option value="Kinh tế">Kinh tế</option>
                       <option value="Y học">Y học</option>
                       <option value="Luật">Luật</option>
+                      <option value="Kỹ thuật">Kỹ thuật</option>
+                      <option value="Khoa học tự nhiên">Khoa học tự nhiên</option>
+                      <option value="Ngoại ngữ">Ngoại ngữ</option>
+                      <option value="Thiết kế">Thiết kế</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Khác">Khác</option>
                     </select>
                   </div>
                   <div>

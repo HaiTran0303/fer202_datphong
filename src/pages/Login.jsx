@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 function Login() {
@@ -112,6 +112,14 @@ function Login() {
               đăng ký tài khoản mới
             </Link>
           </p>
+          
+          {/* Demo Credentials */}
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <h3 className="text-sm font-medium text-blue-900 mb-1">Demo Mode</h3>
+            <p className="text-xs text-blue-700">
+              <strong>Email:</strong> demo@test.com | <strong>Mật khẩu:</strong> 123456
+            </p>
+          </div>
         </div>
 
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">

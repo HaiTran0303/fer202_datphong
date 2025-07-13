@@ -30,6 +30,10 @@ function SearchPosts() {
     district: '',
     gender: '',
     roomType: '',
+    school: '',
+    major: '',
+    interests: [],
+    lifestyle: [],
     amenities: []
   });
   const [sortBy, setSortBy] = useState('newest');
@@ -57,6 +61,10 @@ function SearchPosts() {
       availableFrom: "2024-02-01",
       amenities: ["wifi", "ac", "washing", "security"],
       rules: ["Không hút thuốc", "Giữ yên tĩnh sau 22h", "Dọn dẹp chung"],
+      school: "Đại học Khoa học Tự nhiên",
+      major: "Công nghệ thông tin",
+      interests: ["Đọc sách", "Yoga", "Học ngoại ngữ"],
+      lifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều"],
       images: ["/api/placeholder/400/300"],
       author: {
         name: "Minh Anh",
@@ -226,11 +234,13 @@ function SearchPosts() {
         const matchesDistrict = !filters.district || post.district === filters.district;
         const matchesGender = !filters.gender || post.gender === filters.gender || !post.gender;
         const matchesRoomType = !filters.roomType || post.roomType === filters.roomType;
+        const matchesSchool = !filters.school || post.school?.toLowerCase().includes(filters.school.toLowerCase());
+        const matchesMajor = !filters.major || post.major === filters.major;
         
         const matchesAmenities = filters.amenities.length === 0 || 
                                 filters.amenities.every(amenity => post.amenities.includes(amenity));
 
-        return matchesSearch && matchesPrice && matchesDistrict && matchesGender && matchesRoomType && matchesAmenities;
+        return matchesSearch && matchesPrice && matchesDistrict && matchesGender && matchesRoomType && matchesSchool && matchesMajor && matchesAmenities;
       });
 
       // Sort posts
@@ -448,6 +458,40 @@ function SearchPosts() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* School */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trường học
+                </label>
+                <input
+                  type="text"
+                  value={filters.school}
+                  onChange={(e) => handleFilterChange('school', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Nhập tên trường..."
+                />
+              </div>
+
+              {/* Major */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ngành học
+                </label>
+                <select
+                  value={filters.major}
+                  onChange={(e) => handleFilterChange('major', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Tất cả ngành</option>
+                  <option value="Công nghệ thông tin">Công nghệ thông tin</option>
+                  <option value="Kinh tế">Kinh tế</option>
+                  <option value="Y học">Y học</option>
+                  <option value="Luật">Luật</option>
+                  <option value="Kỹ thuật">Kỹ thuật</option>
+                  <option value="Marketing">Marketing</option>
+                </select>
               </div>
 
               {/* Clear Filters */}

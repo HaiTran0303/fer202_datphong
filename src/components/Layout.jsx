@@ -1,8 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const Layout = ({ children }) => {
   const location = useLocation();
+  const { currentUser, logout } = useAuth();
 
   return (
     <div className="min-h-screen">
@@ -63,28 +65,62 @@ const Layout = ({ children }) => {
             {/* Right Menu */}
             <div className="flex items-center space-x-4">
               <Link 
-                to="/saved" 
-                className="flex items-center text-gray-600 hover:text-gray-800 text-sm"
-              >
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-                Yêu thích
-              </Link>
-
-              <Link 
-                to="/login" 
+                to="/suggestions" 
                 className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
               >
-                Đăng nhập
+                Gợi ý AI
               </Link>
 
               <Link 
-                to="/register" 
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                to="/connections" 
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
               >
-                Đăng ký
+                Kết nối
               </Link>
+
+              <Link 
+                to="/ratings" 
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
+              >
+                Đánh giá
+              </Link>
+
+              <Link 
+                to="/profile" 
+                className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
+              >
+                Hồ sơ
+              </Link>
+
+              {currentUser ? (
+                <>
+                  <span className="text-gray-600 text-sm">
+                    Xin chào, {currentUser.displayName || currentUser.email}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
+                  >
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/login" 
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
+                  >
+                    Đăng nhập
+                  </Link>
+
+                  <Link 
+                    to="/register" 
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
+                  >
+                    Đăng ký
+                  </Link>
+                </>
+              )}
 
               <Link 
                 to="/create-post" 

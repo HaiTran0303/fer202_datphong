@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { 
   Mail, 
   Lock, 
@@ -130,6 +130,14 @@ function Register() {
               đăng nhập nếu đã có tài khoản
             </Link>
           </p>
+          
+          {/* Demo Notice */}
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+            <h3 className="text-sm font-medium text-green-900 mb-1">Demo Mode</h3>
+            <p className="text-xs text-green-700">
+              Bạn có thể đăng ký với bất kỳ email nào để test tính năng
+            </p>
+          </div>
         </div>
 
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">

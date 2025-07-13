@@ -1,30 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { postsService } from '../utils/firebase';
+import { 
+  User, 
+  MapPin, 
+  DollarSign, 
+  School, 
+  Users, 
+  Calendar,
+  Heart,
+  Home,
+  Plus,
+  X,
+  Phone
+} from 'lucide-react';
 
 const CreatePost = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    price: '',
+    budget: '',
     location: '',
-    area: '',
-    category: 'phong-tro',
+    district: '',
+    city: 'Hồ Chí Minh',
+    roomType: 'double',
+    genderPreference: '',
+    myGender: '',
+    school: '',
+    major: '',
+    year: '',
+    availableFrom: '',
     contactName: '',
     contactPhone: '',
+    interests: [],
+    lifestyle: [],
     images: []
   });
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Check authentication
+  useEffect(() => {
+    if (!currentUser) {
+      navigate('/login');
+    }
+  }, [currentUser, navigate]);
+
+  if (!currentUser) {
+    return null;
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleArrayToggle = (field, item) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: prev[field].includes(item)
+        ? prev[field].filter(i => i !== item)
+        : [...prev[field], item]
     }));
   };
 
@@ -53,12 +97,14 @@ const CreatePost = () => {
     try {
       const postData = {
         ...formData,
-        price: parseInt(formData.price),
-        area: parseInt(formData.area),
-        authorName: formData.contactName,
+        type: 'roommate-search',
+        budget: parseInt(formData.budget),
+        authorId: currentUser.uid,
+        authorName: formData.contactName || currentUser.displayName,
         authorPhone: formData.contactPhone,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        status: 'active'
       };
 
       await postsService.createPost(postData);
@@ -71,82 +117,99 @@ const CreatePost = () => {
     }
   };
 
+  const commonInterests = [
+    'Đọc sách', 'Xem phim', 'Nghe nhạc', 'Du lịch', 'Thể thao', 'Nấu ăn',
+    'Chơi game', 'Nhiếp ảnh', 'Học ngoại ngữ', 'Yoga', 'Gym', 'Vẽ'
+  ];
+
+  const lifestyleOptions = [
+    'Sạch sẽ', 'Yên tĩnh', 'Thân thiện', 'Không hút thuốc', 'Không uống rượu',
+    'Dậy sớm', 'Đi ngủ muộn', 'Thích nấu ăn', 'Thích tiệc tùng', 'Học tập nhiều'
+  ];
+
   return (
     <div className="bg-gray-50 min-h-screen py-8">
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h1 className="text-2xl font-semibold text-gray-800 mb-2">Đăng tin cho thuê</h1>
-          <p className="text-gray-600">Điền thông tin chi tiết để đăng tin hiệu quả</p>
+          <div className="flex items-center mb-4">
+            <Users className="w-8 h-8 text-blue-600 mr-3" />
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-800">Tìm bạn ghép trọ</h1>
+              <p className="text-gray-600">Tạo bài đăng để tìm bạn ghép trọ phù hợp</p>
+            </div>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Thông tin cơ bản</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <User className="w-5 h-5 mr-2" />
+              Thông tin cơ bản
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tiêu đề tin đăng *
+                  Tiêu đề bài đăng *
                 </label>
                 <input
                   type="text"
                   name="title"
                   value={formData.title}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="VD: Cho thuê phòng trọ đẹp, đầy đủ tiện nghi..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="VD: Nữ sinh viên tìm bạn ghép trọ quận 1..."
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Loại hình cho thuê *
+                  Giới tính của bạn *
                 </label>
                 <select
-                  name="category"
-                  value={formData.category}
+                  name="myGender"
+                  value={formData.myGender}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
-                  <option value="phong-tro">Phòng trọ</option>
-                  <option value="nha-nguyen-can">Nhà nguyên căn</option>
-                  <option value="can-ho-chung-cu">Căn hộ chung cư</option>
-                  <option value="can-ho-mini">Căn hộ mini</option>
-                  <option value="can-ho-dich-vu">Căn hộ dịch vụ</option>
-                  <option value="o-ghep">Ở ghép</option>
-                  <option value="mat-bang">Mặt bằng</option>
+                  <option value="">Chọn giới tính</option>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Địa chỉ *
+                  Tìm bạn giới tính *
                 </label>
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location}
+                <select
+                  name="genderPreference"
+                  value={formData.genderPreference}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="VD: Quận 1, TP.HCM"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
-                />
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="male">Nam</option>
+                  <option value="female">Nữ</option>
+                  <option value="any">Không quan trọng</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Giá cho thuê (VNĐ/tháng) *
+                  Ngân sách (VNĐ/tháng) *
                 </label>
                 <input
                   type="number"
-                  name="price"
-                  value={formData.price}
+                  name="budget"
+                  value={formData.budget}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="VD: 3000000"
                   required
                 />
@@ -154,17 +217,21 @@ const CreatePost = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Diện tích (m²) *
+                  Loại phòng *
                 </label>
-                <input
-                  type="number"
-                  name="area"
-                  value={formData.area}
+                <select
+                  name="roomType"
+                  value={formData.roomType}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="VD: 25"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   required
-                />
+                >
+                  <option value="single">Phòng đơn</option>
+                  <option value="double">Phòng đôi</option>
+                  <option value="dorm">Phòng tập thể</option>
+                  <option value="studio">Studio</option>
+                  <option value="apartment">Căn hộ</option>
+                </select>
               </div>
 
               <div className="md:col-span-2">
@@ -176,17 +243,186 @@ const CreatePost = () => {
                   value={formData.description}
                   onChange={handleInputChange}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="Mô tả chi tiết về phòng trọ, tiện ích, vị trí..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Mô tả về bản thân, điều kiện sống mong muốn..."
                   required
                 />
               </div>
             </div>
           </div>
 
+          {/* Location & Education */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <MapPin className="w-5 h-5 mr-2" />
+              Vị trí & Học tập
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Thành phố *
+                </label>
+                <select
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="Hồ Chí Minh">Hồ Chí Minh</option>
+                  <option value="Hà Nội">Hà Nội</option>
+                  <option value="Đà Nẵng">Đà Nẵng</option>
+                  <option value="Cần Thơ">Cần Thơ</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quận/Huyện *
+                </label>
+                <input
+                  type="text"
+                  name="district"
+                  value={formData.district}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="VD: Quận 1"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Trường học *
+                </label>
+                <input
+                  type="text"
+                  name="school"
+                  value={formData.school}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="VD: Đại học FPT"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ngành học *
+                </label>
+                <select
+                  name="major"
+                  value={formData.major}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Chọn ngành học</option>
+                  <option value="Công nghệ thông tin">Công nghệ thông tin</option>
+                  <option value="Kinh tế">Kinh tế</option>
+                  <option value="Y học">Y học</option>
+                  <option value="Luật">Luật</option>
+                  <option value="Kỹ thuật">Kỹ thuật</option>
+                  <option value="Khoa học tự nhiên">Khoa học tự nhiên</option>
+                  <option value="Ngoại ngữ">Ngoại ngữ</option>
+                  <option value="Thiết kế">Thiết kế</option>
+                  <option value="Marketing">Marketing</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Năm học *
+                </label>
+                <select
+                  name="year"
+                  value={formData.year}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Chọn năm</option>
+                  <option value="1">Năm 1</option>
+                  <option value="2">Năm 2</option>
+                  <option value="3">Năm 3</option>
+                  <option value="4">Năm 4</option>
+                  <option value="5">Năm 5</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Có thể dọn vào từ *
+                </label>
+                <input
+                  type="date"
+                  name="availableFrom"
+                  value={formData.availableFrom}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Interests */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Heart className="w-5 h-5 mr-2" />
+              Sở thích
+            </h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {commonInterests.map(interest => (
+                <button
+                  key={interest}
+                  type="button"
+                  onClick={() => handleArrayToggle('interests', interest)}
+                  className={`p-3 text-sm rounded-lg border transition-colors ${
+                    formData.interests.includes(interest)
+                      ? 'bg-blue-100 border-blue-300 text-blue-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {interest}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lifestyle */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Home className="w-5 h-5 mr-2" />
+              Lối sống
+            </h2>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {lifestyleOptions.map(option => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => handleArrayToggle('lifestyle', option)}
+                  className={`p-3 text-sm rounded-lg border transition-colors ${
+                    formData.lifestyle.includes(option)
+                      ? 'bg-green-100 border-green-300 text-green-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Contact Information */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Thông tin liên hệ</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Phone className="w-5 h-5 mr-2" />
+              Thông tin liên hệ
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -198,7 +434,7 @@ const CreatePost = () => {
                   name="contactName"
                   value={formData.contactName}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="VD: Nguyễn Văn A"
                   required
                 />
@@ -213,7 +449,7 @@ const CreatePost = () => {
                   name="contactPhone"
                   value={formData.contactPhone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="VD: 0123456789"
                   required
                 />
@@ -294,7 +530,7 @@ const CreatePost = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
               >
                 {loading ? (
                   <>

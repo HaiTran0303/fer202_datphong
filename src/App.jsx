@@ -8,15 +8,18 @@ import Suggestions from './pages/Suggestions';
 import Connections from './pages/Connections';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Ratings from './pages/Ratings';
 import FirebaseTest from './test/FirebaseTest';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary';
+import DemoModal from './components/DemoModal';
 import './App.css';
 
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <DemoModal />
         <Router>
           <Routes>
             {/* Auth Routes - without Layout */}
@@ -31,9 +34,10 @@ function App() {
                   <Route path="/create-post" element={<CreatePost />} />
                   <Route path="/search" element={<SearchPosts />} />
                   <Route path="/post/:id" element={<PostDetail />} />
-                  <Route path="/suggestions" element={<Suggestions />} />
-                  <Route path="/connections" element={<Connections />} />
-                  <Route path="/firebase-test" element={<FirebaseTest />} />
+                                  <Route path="/suggestions" element={<Suggestions />} />
+                <Route path="/connections" element={<Connections />} />
+                <Route path="/ratings" element={<Ratings />} />
+                <Route path="/firebase-test" element={<FirebaseTest />} />
                   
                   {/* Category Routes */}
                   <Route path="/nha-nguyen-can" element={<Home />} />
