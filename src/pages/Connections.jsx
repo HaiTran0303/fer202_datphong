@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'; // Removed useNavigate
 import { useAuth } from '../hooks/useAuth';
 import { connectionService } from '../utils/connectionService';
 import { 
@@ -23,218 +23,45 @@ import {
 
 function Connections() {
   const { currentUser } = useAuth();
+  // Removed useNavigate as it's not directly used for navigation in this component
   const [activeTab, setActiveTab] = useState('messages');
-  const [messages, setMessages] = useState([]);
-  const [invitations, setInvitations] = useState([]);
-  const [matches, setMatches] = useState([]);
+  // Re-added 'messages' state to display active conversations in the "Tin nhắn" tab
+  const [messages, setMessages] = useState([]); 
+  const [sentInvitations, setSentInvitations] = useState([]);
+  const [receivedInvitations, setReceivedInvitations] = useState([]);
+  const [matches, setMatches] = useState([]); // Still mocked for now
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] }); // Initialize with conversation as an array
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Mock data
-  const mockMessages = [
-    {
-      id: 1,
-      postId: 1,
-      postTitle: "Tìm bạn nữ ghép trọ quận 1",
-      otherUser: {
-        id: "user123",
-        name: "Minh Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        status: "online"
-      },
-      lastMessage: "Chào bạn! Tôi rất quan tâm đến bài đăng của bạn",
-      lastMessageTime: "2024-01-15T14:30:00Z",
-      unread: true,
-      conversation: [
-        {
-          id: 1,
-          sender: "user123",
-          content: "Chào bạn! Tôi rất quan tâm đến bài đăng của bạn",
-          timestamp: "2024-01-15T14:30:00Z"
-        },
-        {
-          id: 2,
-          sender: "currentUser",
-          content: "Chào bạn! Cảm ơn bạn đã quan tâm. Bạn có thể cho tôi biết thêm về bản thân không?",
-          timestamp: "2024-01-15T14:32:00Z"
-        }
-      ]
-    },
-    {
-      id: 2,
-      postId: 2,
-      postTitle: "Studio mới xây quận 7",
-      otherUser: {
-        id: "user456",
-        name: "Thu Hà",
-        avatar: "/api/placeholder/40/40",
-        verified: false,
-        status: "offline"
-      },
-      lastMessage: "Phòng vẫn còn trống không bạn?",
-      lastMessageTime: "2024-01-14T10:15:00Z",
-      unread: false,
-      conversation: [
-        {
-          id: 1,
-          sender: "user456",
-          content: "Phòng vẫn còn trống không bạn?",
-          timestamp: "2024-01-14T10:15:00Z"
-        },
-        {
-          id: 2,
-          sender: "currentUser",
-          content: "Vẫn còn bạn ạ. Bạn có muốn xem phòng không?",
-          timestamp: "2024-01-14T10:20:00Z"
-        },
-        {
-          id: 3,
-          sender: "user456",
-          content: "Có ạ. Chúng ta có thể hẹn gặp vào cuối tuần được không?",
-          timestamp: "2024-01-14T10:25:00Z"
-        }
-      ]
-    },
-    {
-      id: 3,
-      postId: 3,
-      postTitle: "Căn hộ cao cấp quận 2",
-      otherUser: {
-        id: "user789",
-        name: "Quang Minh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        status: "online"
-      },
-      lastMessage: "Khi nào có thể chuyển vào ạ?",
-      lastMessageTime: "2024-01-13T16:45:00Z",
-      unread: true,
-      conversation: [
-        {
-          id: 1,
-          sender: "user789",
-          content: "Khi nào có thể chuyển vào ạ?",
-          timestamp: "2024-01-13T16:45:00Z"
-        }
-      ]
-    }
-  ];
-
-  const mockInvitations = [
-    {
-      id: 1,
-      type: "received",
-      fromUser: {
-        id: "user111",
-        name: "Phương Linh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        school: "ĐH Bách Khoa",
-        major: "Công nghệ thông tin"
-      },
-      postId: 4,
-      postTitle: "Tìm bạn ở ghép studio quận 7",
-      message: "Chào bạn! Tôi thấy chúng ta có nhiều điểm chung và muốn làm quen. Hy vọng chúng ta có thể trở thành bạn cùng phòng!",
-      timestamp: "2024-01-15T11:20:00Z",
-      status: "pending"
-    },
-    {
-      id: 2,
-      type: "sent",
-      toUser: {
-        id: "user222",
-        name: "Lan Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: false,
-        school: "ĐH Khoa học Tự nhiên",
-        major: "Sinh học"
-      },
-      postId: 5,
-      postTitle: "Phòng trọ sinh viên quận 3",
-      message: "Xin chào! Tôi rất thích bài đăng của bạn và muốn kết nối.",
-      timestamp: "2024-01-14T09:30:00Z",
-      status: "pending"
-    },
-    {
-      id: 3,
-      type: "received",
-      fromUser: {
-        id: "user333",
-        name: "Hoàng Long",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        school: "ĐH Kinh tế",
-        major: "Quản trị kinh doanh"
-      },
-      postId: 6,
-      postTitle: "Căn hộ 2 phòng ngủ quận 2",
-      message: "Chào bạn! Tôi quan tâm đến bài đăng của bạn.",
-      timestamp: "2024-01-13T14:10:00Z",
-      status: "accepted"
-    }
-  ];
-
-  const mockMatches = [
-    {
-      id: 1,
-      user: {
-        id: "user444",
-        name: "Mai Anh",
-        avatar: "/api/placeholder/40/40",
-        verified: true,
-        school: "ĐH Bách Khoa",
-        major: "Kỹ thuật phần mềm",
-        interests: ["Đọc sách", "Yoga", "Du lịch"],
-        lifestyle: ["Sạch sẽ", "Yên tĩnh"]
-      },
-      postId: 7,
-      postTitle: "Tìm bạn nữ ghép trọ quận 1",
-      matchScore: 92,
-      mutualInterests: ["Đọc sách", "Yoga"],
-      timestamp: "2024-01-15T08:00:00Z",
-      status: "new"
-    },
-    {
-      id: 2,
-      user: {
-        id: "user555",
-        name: "Ngọc Hân",
-        avatar: "/api/placeholder/40/40",
-        verified: false,
-        school: "ĐH Khoa học Tự nhiên",
-        major: "Toán học",
-        interests: ["Xem phim", "Nấu ăn"],
-        lifestyle: ["Thân thiện", "Học tập nhiều"]
-      },
-      postId: 8,
-      postTitle: "Studio cao cấp quận 7",
-      matchScore: 85,
-      mutualInterests: ["Xem phim"],
-      timestamp: "2024-01-14T12:30:00Z",
-      status: "contacted"
-    }
-  ];
+  const [invitationTab, setInvitationTab] = useState('received');
 
   useEffect(() => {
     fetchConnections();
   }, [currentUser]);
 
+  // Removed debugging useEffect for selectedConversation
+
   const fetchConnections = async () => {
-    if (!currentUser) return;
-    
+    if (!currentUser) {
+      console.log('Connections: No current user, skipping fetchConnections');
+      return;
+    }
     setLoading(true);
+    console.log('Connections: Fetching connections for user ID:', currentUser.uid);
     try {
-      // Fetch real data from Firebase
-      const [sentConnections, receivedConnections] = await Promise.all([
+      const [sentConnections, receivedConnections, activeConversations] = await Promise.all([
         connectionService.getSentConnections(currentUser.uid),
-        connectionService.getReceivedConnections(currentUser.uid)
+        connectionService.getReceivedConnections(currentUser.uid),
+        connectionService.getActiveConversations(currentUser.uid) // Fetch active conversations
       ]);
 
-      // Transform data for display
-      const sentInvitations = sentConnections.map(conn => ({
+      console.log('Connections: Raw fetched sent connections:', sentConnections);
+      console.log('Connections: Raw fetched received connections:', receivedConnections);
+      console.log('Connections: Raw fetched active conversations:', activeConversations);
+
+      const sent = sentConnections.map(conn => ({
         id: conn.id,
         type: 'sent',
         toUser: conn.toUser,
@@ -245,7 +72,7 @@ function Connections() {
         status: conn.status
       }));
 
-      const receivedInvitations = receivedConnections.map(conn => ({
+      const received = receivedConnections.map(conn => ({
         id: conn.id,
         type: 'received',
         fromUser: conn.fromUser,
@@ -256,31 +83,64 @@ function Connections() {
         status: conn.status
       }));
 
-      setInvitations([...sentInvitations, ...receivedInvitations]);
-      setMessages(mockMessages); // Keep mock messages for now
-      setMatches(mockMatches); // Keep mock matches for now
+      // Map active conversations to messages state format
+      const mappedMessages = activeConversations.map(conv => ({
+        id: conv.id,
+        otherUser: conv.otherUser, // This should now be populated by getActiveConversations
+        postTitle: conv.post?.title || 'Bài đăng',
+        lastMessage: conv.message, // Use the connection message as last message for now
+        lastMessageTime: conv.updatedAt?.toDate ? conv.updatedAt.toDate().toISOString() : new Date().toISOString(),
+        unread: false // Placeholder, actual unread count would need more logic
+      }));
+
+      console.log('Connections: Transformed sent invitations:', sent);
+      console.log('Connections: Transformed received invitations:', received);
+      console.log('Connections: Mapped active conversations (messages):', mappedMessages);
+
+
+      setSentInvitations(sent);
+      setReceivedInvitations(received);
+      setMessages(mappedMessages); // Set messages state
+      setMatches([]);
     } catch (error) {
-      console.error('Error fetching connections:', error);
-      // Fallback to mock data
-      setMessages(mockMessages);
-      setInvitations(mockInvitations);
-      setMatches(mockMatches);
+      console.error('Connections: Error fetching connections:', error);
     } finally {
       setLoading(false);
+      console.log('Connections: Loading state set to false.');
     }
   };
 
-  const handleSendMessage = (conversationId) => {
-    if (!newMessage.trim()) return;
-    
-    const updatedMessages = messages.map(msg => {
-      if (msg.id === conversationId) {
+  const handleSendMessage = async () => { // Made async
+    if (!newMessage.trim() || !selectedConversation) return;
+
+    try {
+      const fromUserId = currentUser.uid;
+      const toUserId = selectedConversation.otherUser.uid;
+      const connectionId = selectedConversation.id;
+
+      await connectionService.sendMessage(connectionId, fromUserId, toUserId, newMessage);
+
+      // Optimistically update UI
+      setSelectedConversation(prev => {
+        console.log('handleSendMessage: prev state for setSelectedConversation:', prev);
+        console.log('handleSendMessage: prev.conversation (before check):', prev?.conversation);
+
+        // Ensure prev is an object before accessing its properties
+        if (!prev) {
+          console.error('handleSendMessage: prev is null or undefined. Cannot update selectedConversation.');
+          // If prev is null, return a new initial state to prevent further errors
+          return { conversation: [] }; 
+        }
+        const currentConversation = Array.isArray(prev.conversation) ? prev.conversation : [];
+        
+        console.log('handleSendMessage: currentConversation (after check):', currentConversation);
+
         return {
-          ...msg,
+          ...prev,
           conversation: [
-            ...msg.conversation,
+            ...currentConversation,
             {
-              id: msg.conversation.length + 1,
+              id: Date.now(), // Temporary ID for optimistic update
               sender: "currentUser",
               content: newMessage,
               timestamp: new Date().toISOString()
@@ -289,24 +149,86 @@ function Connections() {
           lastMessage: newMessage,
           lastMessageTime: new Date().toISOString()
         };
-      }
-      return msg;
-    });
-    
-    setMessages(updatedMessages);
-    setNewMessage('');
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+      alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
+    }
   };
 
   const handleInvitationResponse = async (invitationId, response) => {
     try {
       if (response === 'accept') {
         await connectionService.acceptConnection(invitationId);
+        const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
+        if (acceptedInvitation) {
+          console.log('Connections: Accepted Invitation:', acceptedInvitation);
+          console.log('Connections: acceptedInvitation.fromUser:', acceptedInvitation.fromUser);
+          console.log('Connections: acceptedInvitation.toUser:', acceptedInvitation.toUser);
+
+          // Fallback for otherUser if fromUser/toUser are undefined
+          let otherUser;
+          if (acceptedInvitation.fromUser && acceptedInvitation.fromUser.uid) {
+            otherUser = (acceptedInvitation.fromUser.uid === currentUser.uid)
+              ? acceptedInvitation.toUser
+              : acceptedInvitation.fromUser;
+          } else {
+            // Fallback: Create a dummy otherUser object
+            // This happens if fromUser/toUser are not populated by connectionService
+            const targetUserId = acceptedInvitation.fromUserId === currentUser.uid
+              ? acceptedInvitation.toUserId
+              : acceptedInvitation.fromUserId;
+            
+            otherUser = {
+              uid: targetUserId,
+              name: "Người dùng không xác định",
+              avatar: "https://via.placeholder.com/48", // Placeholder for avatar
+            };
+            console.warn('Connections: Using fallback otherUser due to undefined fromUser/toUser in acceptedInvitation:', acceptedInvitation);
+          }
+
+          if (!otherUser) {
+            console.error('Connections: otherUser is still undefined even after fallback logic.');
+            alert('Lỗi: Không thể xác định người dùng khác trong cuộc trò chuyện.');
+            return;
+          }
+          console.log('Connections: Determined otherUser:', otherUser);
+          
+          const conversationMessages = await connectionService.getMessagesByConnectionId(invitationId);
+          console.log('Connections: Fetched conversation messages (raw):', conversationMessages);
+
+          // Ensure conversationMessages is an array before mapping
+          const mappedConversation = Array.isArray(conversationMessages)
+            ? conversationMessages.map(msg => ({
+                id: msg.id,
+                sender: msg.fromUserId === currentUser.uid ? 'currentUser' : 'otherUser',
+                content: msg.content,
+                timestamp: msg.createdAt?.toDate ? msg.createdAt.toDate().toISOString() : new Date().toISOString()
+              }))
+            : []; // Default to empty array if not an array
+          
+          console.log('Connections: Mapped conversation (before setting state):', mappedConversation);
+
+          const newSelectedConversation = { 
+            id: acceptedInvitation.id, 
+            otherUser: otherUser,
+            postTitle: acceptedInvitation.postTitle,
+            conversation: Array.isArray(mappedConversation) ? mappedConversation : [], // Explicitly ensure it's an array
+            lastMessage: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].content : '',
+            lastMessageTime: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].timestamp : new Date().toISOString()
+          };
+
+          setSelectedConversation(newSelectedConversation); 
+          console.log('Connections: selectedConversation state set to:', newSelectedConversation); 
+
+          setActiveTab('messages');
+        }
       } else {
         await connectionService.declineConnection(invitationId);
       }
 
-      // Update local state
-      const updatedInvitations = invitations.map(inv => {
+      const updatedInvitations = [...sentInvitations, ...receivedInvitations].map(inv => {
         if (inv.id === invitationId) {
           return {
             ...inv,
@@ -316,7 +238,8 @@ function Connections() {
         return inv;
       });
       
-      setInvitations(updatedInvitations);
+      setSentInvitations(updatedInvitations.filter(inv => inv.type === 'sent'));
+      setReceivedInvitations(updatedInvitations.filter(inv => inv.type === 'received'));
     } catch (error) {
       console.error('Error responding to invitation:', error);
       alert('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại.');
@@ -337,9 +260,10 @@ function Connections() {
   const getUnreadCount = (type) => {
     switch (type) {
       case 'messages':
-        return messages.filter(msg => msg.unread).length;
+        // Assuming messages state now holds all active conversations, count unread if applicable
+        return messages.filter(msg => msg.unread).length; // Re-enable unread count if applicable
       case 'invitations':
-        return invitations.filter(inv => inv.status === 'pending' && inv.type === 'received').length;
+        return [...sentInvitations, ...receivedInvitations].filter(inv => inv.status === 'pending').length;
       case 'matches':
         return matches.filter(match => match.status === 'new').length;
       default:
@@ -348,15 +272,9 @@ function Connections() {
   };
 
   const filteredMessages = messages.filter(msg => 
-    msg.otherUser.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    msg.postTitle.toLowerCase().includes(searchTerm.toLowerCase())
+    msg.otherUser?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    msg.postTitle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const filteredInvitations = invitations.filter(inv => {
-    const user = inv.type === 'received' ? inv.fromUser : inv.toUser;
-    return user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           inv.postTitle.toLowerCase().includes(searchTerm.toLowerCase());
-  });
 
   const filteredMatches = matches.filter(match => 
     match.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -409,7 +327,6 @@ function Connections() {
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Kết nối</h1>
         <p className="text-gray-600">Quản lý tin nhắn, lời mời và gợi ý kết nối</p>
       </div>
-
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-lg mb-6">
         <div className="border-b border-gray-200">
@@ -435,7 +352,6 @@ function Connections() {
             ))}
           </div>
         </div>
-
         {/* Search */}
         <div className="p-6 border-b border-gray-200">
           <div className="relative">
@@ -449,7 +365,6 @@ function Connections() {
             />
           </div>
         </div>
-
         {/* Tab Content */}
         <div className="p-6">
           {loading ? (
@@ -473,11 +388,11 @@ function Connections() {
                         <div className="flex items-start space-x-4">
                           <div className="relative">
                             <img
-                              src={message.otherUser.avatar}
-                              alt={message.otherUser.name}
+                              src={message.otherUser?.avatar || 'https://via.placeholder.com/48'}
+                              alt={message.otherUser?.name || 'Người dùng'}
                               className="w-12 h-12 rounded-full"
                             />
-                            {message.otherUser.status === 'online' && (
+                            {message.otherUser?.status === 'online' && (
                               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                             )}
                           </div>
@@ -486,9 +401,9 @@ function Connections() {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center space-x-2">
                                 <h3 className="font-semibold text-gray-900">
-                                  {message.otherUser.name}
+                                  {message.otherUser?.name || 'Người dùng'}
                                 </h3>
-                                {message.otherUser.verified && (
+                                {message.otherUser?.verified && (
                                   <CheckCircle size={16} className="text-green-500" />
                                 )}
                               </div>
@@ -532,104 +447,82 @@ function Connections() {
                   )}
                 </div>
               )}
-
               {/* Invitations Tab */}
               {activeTab === 'invitations' && (
-                <div className="space-y-4">
-                  {filteredInvitations.length === 0 ? (
-                    <div className="text-center py-8">
-                      <UserPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">Chưa có lời mời nào</p>
-                    </div>
-                  ) : (
-                    filteredInvitations.map(invitation => (
-                      <div key={invitation.id} className="border rounded-lg p-4">
-                        <div className="flex items-start space-x-4">
-                          <img
-                            src={invitation.type === 'received' ? invitation.fromUser.avatar : invitation.toUser.avatar}
-                            alt={invitation.type === 'received' ? invitation.fromUser.name : invitation.toUser.name}
-                            className="w-12 h-12 rounded-full"
-                          />
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-semibold text-gray-900">
-                                  {invitation.type === 'received' ? invitation.fromUser.name : invitation.toUser.name}
-                                </h3>
-                                {(invitation.type === 'received' ? invitation.fromUser.verified : invitation.toUser.verified) && (
-                                  <CheckCircle size={16} className="text-green-500" />
-                                )}
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  invitation.type === 'received' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {invitation.type === 'received' ? 'Đã nhận' : 'Đã gửi'}
-                                </span>
+                <div>
+                  {/* Tabs con */}
+                  <div className="flex space-x-4 mb-4">
+                    <button
+                      className={`px-4 py-2 rounded-md font-medium text-sm ${invitationTab === 'received' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setInvitationTab('received')}
+                    >
+                      Lời mời đã nhận
+                    </button>
+                    <button
+                      className={`px-4 py-2 rounded-md font-medium text-sm ${invitationTab === 'sent' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                      onClick={() => setInvitationTab('sent')}
+                    >
+                      Lời mời đã gửi
+                    </button>
+                  </div>
+                  {/* Danh sách lời mời */}
+                  <div className="space-y-4">
+                    {invitationTab === 'received' ? (
+                      receivedInvitations.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">Chưa có lời mời nào được nhận</div>
+                      ) : (
+                        receivedInvitations.map(inv => (
+                          <div key={inv.id} className="border rounded-lg p-4 flex items-center justify-between">
+                            <div className="flex items-start space-x-4">
+                              <img
+                                src={inv.fromUser?.avatar || 'https://via.placeholder.com/48'}
+                                alt={inv.fromUser?.name || 'Người dùng'}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                              <div>
+                                <div className="font-semibold">{inv.fromUser?.name || 'Người gửi'}</div>
+                                <div className="text-sm text-gray-600">{inv.postTitle}</div>
+                                <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
+                                <div className="text-sm mt-1">{inv.message}</div>
                               </div>
-                              <span className="text-sm text-gray-500">
-                                {formatTime(invitation.timestamp)}
-                              </span>
                             </div>
-                            
-                            <div className="text-sm text-gray-600 mb-2">
-                              <p>
-                                {invitation.type === 'received' ? invitation.fromUser.school : invitation.toUser.school} - {invitation.type === 'received' ? invitation.fromUser.major : invitation.toUser.major}
-                              </p>
-                            </div>
-                            
-                            <p className="text-sm text-gray-600 mb-2">
-                              Về: {invitation.postTitle}
-                            </p>
-                            
-                            <p className="text-gray-700 mb-3">
-                              {invitation.message}
-                            </p>
-                            
-                            <div className="flex items-center justify-between">
-                              <Link
-                                to={`/post/${invitation.postId}`}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Xem bài đăng
-                              </Link>
-                              
-                              {invitation.type === 'received' && invitation.status === 'pending' && (
-                                <div className="flex items-center space-x-2">
-                                  <button
-                                    onClick={() => handleInvitationResponse(invitation.id, 'decline')}
-                                    className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm"
-                                  >
-                                    Từ chối
-                                  </button>
-                                  <button
-                                    onClick={() => handleInvitationResponse(invitation.id, 'accept')}
-                                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
-                                  >
-                                    Chấp nhận
-                                  </button>
-                                </div>
+                            <div className="flex space-x-2">
+                              {inv.status === 'pending' && (
+                                <>
+                                  <button onClick={() => handleInvitationResponse(inv.id, 'accept')} className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-xs">Chấp nhận</button>
+                                  <button onClick={() => handleInvitationResponse(inv.id, 'decline')} className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 text-xs">Từ chối</button>
+                                </>
                               )}
-                              
-                              {invitation.status !== 'pending' && (
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  invitation.status === 'accepted' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {invitation.status === 'accepted' ? 'Đã chấp nhận' : 'Đã từ chối'}
-                                </span>
-                              )}
+                              {inv.status === 'accepted' && <span className="text-green-600 text-xs font-medium">Đã chấp nhận</span>}
+                              {inv.status === 'declined' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>}
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                        ))
+                      )
+                    ) : (
+                      sentInvitations.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">Chưa có lời mời nào đã gửi</div>
+                      ) : (
+                        sentInvitations.map(inv => (
+                          <div key={inv.id} className="border rounded-lg p-4 flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{inv.toUser?.name || 'Người nhận'}</div>
+                              <div className="text-sm text-gray-600">{inv.postTitle}</div>
+                              <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
+                              <div className="text-sm mt-1">{inv.message}</div>
+                            </div>
+                            <div>
+                              {inv.status === 'pending' && <span className="text-yellow-600 text-xs font-medium">Đang chờ</span>}
+                              {inv.status === 'accepted' && <span className="text-green-600 text-xs font-medium">Đã chấp nhận</span>}
+                              {inv.status === 'declined' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>}
+                            </div>
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
                 </div>
               )}
-
               {/* Matches Tab */}
               {activeTab === 'matches' && (
                 <div className="space-y-4">
@@ -639,91 +532,93 @@ function Connections() {
                       <p className="text-gray-600">Chưa có gợi ý kết nối nào</p>
                     </div>
                   ) : (
-                    filteredMatches.map(match => (
-                      <div key={match.id} className="border rounded-lg p-4">
-                        <div className="flex items-start space-x-4">
-                          <img
-                            src={match.user.avatar}
-                            alt={match.user.name}
-                            className="w-12 h-12 rounded-full"
-                          />
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <h3 className="font-semibold text-gray-900">
-                                  {match.user.name}
-                                </h3>
-                                {match.user.verified && (
-                                  <CheckCircle size={16} className="text-green-500" />
-                                )}
-                                <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                                  <Star size={12} fill="currentColor" />
-                                  <span>{match.matchScore}% phù hợp</span>
+                    <>
+                      {filteredMatches.map(match => (
+                        <div key={match.id} className="border rounded-lg p-4">
+                          <div className="flex items-start space-x-4">
+                            <img
+                              src={match.user.avatar}
+                              alt={match.user.name}
+                              className="w-12 h-12 rounded-full"
+                            />
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-2">
+                                  <h3 className="font-semibold text-gray-900">
+                                    {match.user.name}
+                                  </h3>
+                                  {match.user.verified && (
+                                    <CheckCircle size={16} className="text-green-500" />
+                                  )}
+                                  <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                                    <Star size={12} fill="currentColor" />
+                                    <span>{match.matchScore}% phù hợp</span>
+                                  </div>
                                 </div>
+                                <span className="text-sm text-gray-500">
+                                  {formatTime(match.timestamp)}
+                                </span>
                               </div>
-                              <span className="text-sm text-gray-500">
-                                {formatTime(match.timestamp)}
-                              </span>
-                            </div>
-                            
-                            <div className="text-sm text-gray-600 mb-2">
-                              <p>{match.user.school} - {match.user.major}</p>
-                            </div>
-                            
-                            <p className="text-sm text-gray-600 mb-2">
-                              Về: {match.postTitle}
-                            </p>
-                            
-                            {match.mutualInterests.length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-sm font-medium text-gray-700 mb-1">
-                                  Sở thích chung:
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {match.mutualInterests.map((interest, index) => (
-                                    <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                                      {interest}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            <div className="flex items-center justify-between">
-                              <Link
-                                to={`/post/${match.postId}`}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Xem bài đăng
-                              </Link>
                               
-                              <div className="flex items-center space-x-2">
-                                {match.status === 'new' && (
-                                  <button
-                                    onClick={() => {
-                                      const updatedMatches = matches.map(m => 
-                                        m.id === match.id ? { ...m, status: 'contacted' } : m
-                                      );
-                                      setMatches(updatedMatches);
-                                    }}
-                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
-                                  >
-                                    Gửi lời mời
-                                  </button>
-                                )}
+                              <div className="text-sm text-gray-600 mb-2">
+                                <p>{match.user.school} - {match.user.major}</p>
+                              </div>
+                              
+                              <p className="text-sm text-gray-600 mb-2">
+                                Về: {match.postTitle}
+                              </p>
+                              
+                              {match.mutualInterests.length > 0 && (
+                                <div className="mb-3">
+                                  <div className="text-sm font-medium text-gray-700 mb-1">
+                                    Sở thích chung:
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {match.mutualInterests.map((interest, index) => (
+                                      <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
+                                        {interest}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="flex items-center justify-between">
+                                <Link
+                                  to={`/post/${match.postId}`}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Xem bài đăng
+                                </Link>
                                 
-                                {match.status === 'contacted' && (
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                                    Đã liên hệ
-                                  </span>
-                                )}
+                                <div className="flex items-center space-x-2">
+                                  {match.status === 'new' && (
+                                    <button
+                                      onClick={() => {
+                                        const updatedMatches = matches.map(m => 
+                                          m.id === match.id ? { ...m, status: 'contacted' } : m
+                                        );
+                                        setMatches(updatedMatches);
+                                      }}
+                                      className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
+                                    >
+                                      Gửi lời mời
+                                    </button>
+                                  )}
+                                  
+                                  {match.status === 'contacted' && (
+                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                      Đã liên hệ
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </>
                   )}
                 </div>
               )}
@@ -731,7 +626,6 @@ function Connections() {
           )}
         </div>
       </div>
-
       {/* Conversation Modal */}
       {selectedConversation && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -761,24 +655,28 @@ function Connections() {
             </div>
             
             <div className="h-96 overflow-y-auto p-4 space-y-4">
-              {selectedConversation.conversation.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender === 'currentUser' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                    msg.sender === 'currentUser' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-200 text-gray-900'
-                  }`}>
-                    <p className="text-sm">{msg.content}</p>
-                    <p className={`text-xs mt-1 ${
+              {selectedConversation.conversation && selectedConversation.conversation.length > 0 ? (
+                selectedConversation.conversation.map(msg => (
+                  <div key={msg.id} className={`flex ${msg.sender === 'currentUser' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                       msg.sender === 'currentUser' 
-                        ? 'text-blue-100' 
-                        : 'text-gray-500'
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-200 text-gray-900'
                     }`}>
-                      {formatTime(msg.timestamp)}
-                    </p>
+                      <p className="text-sm">{msg.content}</p>
+                      <p className={`text-xs mt-1 ${
+                        msg.sender === 'currentUser' 
+                          ? 'text-blue-100' 
+                          : 'text-gray-500'
+                      }`}>
+                        {formatTime(msg.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center text-gray-500">Chưa có tin nhắn nào.</div>
+              )}
             </div>
             
             <div className="p-4 border-t">
@@ -789,10 +687,10 @@ function Connections() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Nhập tin nhắn..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(selectedConversation.id)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} // Removed conversationId param
                 />
                 <button
-                  onClick={() => handleSendMessage(selectedConversation.id)}
+                  onClick={() => handleSendMessage()} // Removed conversationId param
                   className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
                 >
                   <Send size={20} />
@@ -806,4 +704,4 @@ function Connections() {
   );
 }
 
-export default Connections; 
+export default Connections;

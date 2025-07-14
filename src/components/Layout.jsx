@@ -153,7 +153,7 @@ const Layout = ({ children }) => {
                           Tin đăng của tôi
                         </Link>
                         <Link
-                          to="/my-connections"
+                          to="/connections"
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                           onClick={() => setShowUserDropdown(false)}
                         >
