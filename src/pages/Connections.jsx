@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { connectionService } from '../utils/connectionService';
 import { 
   MessageCircle, 
   UserPlus, 
@@ -219,18 +220,54 @@ function Connections() {
 
   useEffect(() => {
     fetchConnections();
-  }, []);
+  }, [currentUser]);
 
   const fetchConnections = async () => {
-    setLoading(true);
+    if (!currentUser) return;
     
-    // Simulate API call
-    setTimeout(() => {
+    setLoading(true);
+    try {
+      // Fetch real data from Firebase
+      const [sentConnections, receivedConnections] = await Promise.all([
+        connectionService.getSentConnections(currentUser.uid),
+        connectionService.getReceivedConnections(currentUser.uid)
+      ]);
+
+      // Transform data for display
+      const sentInvitations = sentConnections.map(conn => ({
+        id: conn.id,
+        type: 'sent',
+        toUser: conn.toUser,
+        postId: conn.postId,
+        postTitle: conn.post?.title || 'Bài đăng',
+        message: conn.message,
+        timestamp: conn.createdAt,
+        status: conn.status
+      }));
+
+      const receivedInvitations = receivedConnections.map(conn => ({
+        id: conn.id,
+        type: 'received',
+        fromUser: conn.fromUser,
+        postId: conn.postId,
+        postTitle: conn.post?.title || 'Bài đăng',
+        message: conn.message,
+        timestamp: conn.createdAt,
+        status: conn.status
+      }));
+
+      setInvitations([...sentInvitations, ...receivedInvitations]);
+      setMessages(mockMessages); // Keep mock messages for now
+      setMatches(mockMatches); // Keep mock matches for now
+    } catch (error) {
+      console.error('Error fetching connections:', error);
+      // Fallback to mock data
       setMessages(mockMessages);
       setInvitations(mockInvitations);
       setMatches(mockMatches);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleSendMessage = (conversationId) => {
@@ -260,18 +297,30 @@ function Connections() {
     setNewMessage('');
   };
 
-  const handleInvitationResponse = (invitationId, response) => {
-    const updatedInvitations = invitations.map(inv => {
-      if (inv.id === invitationId) {
-        return {
-          ...inv,
-          status: response === 'accept' ? 'accepted' : 'declined'
-        };
+  const handleInvitationResponse = async (invitationId, response) => {
+    try {
+      if (response === 'accept') {
+        await connectionService.acceptConnection(invitationId);
+      } else {
+        await connectionService.declineConnection(invitationId);
       }
-      return inv;
-    });
-    
-    setInvitations(updatedInvitations);
+
+      // Update local state
+      const updatedInvitations = invitations.map(inv => {
+        if (inv.id === invitationId) {
+          return {
+            ...inv,
+            status: response === 'accept' ? 'accepted' : 'declined'
+          };
+        }
+        return inv;
+      });
+      
+      setInvitations(updatedInvitations);
+    } catch (error) {
+      console.error('Error responding to invitation:', error);
+      alert('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại.');
+    }
   };
 
   const formatTime = (timestamp) => {

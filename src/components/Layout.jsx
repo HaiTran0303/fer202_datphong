@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { User, LogOut, FileText, Settings, ChevronDown } from 'lucide-react';
+import { User, LogOut, FileText, Settings, ChevronDown, UserPlus } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
 const Layout = ({ children }) => {
   const location = useLocation();
@@ -118,6 +119,9 @@ const Layout = ({ children }) => {
                 Hồ sơ
               </Link>
 
+              {/* Notification Dropdown */}
+              {currentUser && <NotificationDropdown />}
+
               {currentUser ? (
                 <div className="relative" ref={dropdownRef}>
                   <button
@@ -147,6 +151,14 @@ const Layout = ({ children }) => {
                         >
                           <FileText className="w-4 h-4 mr-2" />
                           Tin đăng của tôi
+                        </Link>
+                        <Link
+                          to="/my-connections"
+                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          onClick={() => setShowUserDropdown(false)}
+                        >
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Kết nối của tôi
                         </Link>
                         <Link
                           to="/settings"

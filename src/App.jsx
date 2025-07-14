@@ -6,6 +6,7 @@ import SearchPosts from './pages/SearchPosts';
 import PostDetail from './pages/PostDetail';
 import Suggestions from './pages/Suggestions';
 import Connections from './pages/Connections';
+import MyConnections from './pages/MyConnections';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Ratings from './pages/Ratings';
@@ -40,6 +41,7 @@ function App() {
                   <Route path="/post/:id" element={<PostDetail />} />
                   <Route path="/suggestions" element={<Suggestions />} />
                   <Route path="/connections" element={<Connections />} />
+                  <Route path="/my-connections" element={<MyConnections />} />
                   <Route path="/ratings" element={<Ratings />} />
                   <Route path="/my-posts" element={<MyPosts />} />
                   <Route path="/settings" element={<Settings />} />

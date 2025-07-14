@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import ConnectionModal from './ConnectionModal';
 
 const PostCard = ({ post }) => {
+  const { currentUser } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
 
   const formatPrice = (price) => {
     if (price >= 1000000) {
@@ -173,6 +177,23 @@ const PostCard = ({ post }) => {
                 {post.contactPhone || '0123456789'}
               </button>
               
+              {/* Connection Button */}
+              {currentUser && currentUser.uid !== post.authorId && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowConnectionModal(true);
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center"
+                >
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+                  </svg>
+                  Kết nối
+                </button>
+              )}
+              
               {/* Save Button */}
               <button
                 onClick={handleLike}
@@ -191,6 +212,16 @@ const PostCard = ({ post }) => {
           </div>
         </div>
       </div>
+      
+      {/* Connection Modal */}
+      {showConnectionModal && (
+        <ConnectionModal
+          isOpen={showConnectionModal}
+          onClose={() => setShowConnectionModal(false)}
+          post={post}
+          targetUser={post.author}
+        />
+      )}
     </div>
   );
 };

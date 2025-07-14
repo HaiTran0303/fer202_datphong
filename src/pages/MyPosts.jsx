@@ -238,7 +238,18 @@ const MyPosts = () => {
                       <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
                         <div className="flex items-center">
                           <MapPin className="w-4 h-4 mr-1" />
-                          {post.district}, {post.city}
+                          {/* Hiển thị district và location, ngăn cách bằng dấu phẩy nếu cả hai đều có */}
+                          {post.district && post.location ? (
+                            <>
+                              {post.district}, {post.location}
+                            </>
+                          ) : post.district ? (
+                            <>{post.district}</>
+                          ) : post.location ? (
+                            <>{post.location}</>
+                          ) : (
+                            <span>Chưa cập nhật vị trí</span>
+                          )}
                         </div>
                         <div className="flex items-center">
                           <DollarSign className="w-4 h-4 mr-1" />

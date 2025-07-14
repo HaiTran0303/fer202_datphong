@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { postsService } from '../utils/firebase';
+import ConnectionModal from '../components/ConnectionModal';
 import { 
   MapPin, 
   DollarSign, 
@@ -24,7 +25,8 @@ import {
   Shirt,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  UserPlus
 } from 'lucide-react';
 
 function PostDetail() {
@@ -40,6 +42,7 @@ function PostDetail() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showConnectionModal, setShowConnectionModal] = useState(false);
 
 
 
@@ -484,6 +487,16 @@ function PostDetail() {
                 <span>Gửi tin nhắn</span>
               </button>
               
+              {currentUser && currentUser.uid !== post.author?.id && (
+                <button
+                  onClick={() => setShowConnectionModal(true)}
+                  className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
+                >
+                  <UserPlus size={20} />
+                  <span>Gửi lời mời kết nối</span>
+                </button>
+              )}
+              
               <button
                 onClick={() => window.location.href = `tel:${post.author.phone}`}
                 className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
@@ -589,6 +602,22 @@ function PostDetail() {
             </div>
           </div>
         </div>
+      )}
+      
+      {/* Connection Modal */}
+      {showConnectionModal && (
+        <ConnectionModal
+          isOpen={showConnectionModal}
+          onClose={() => setShowConnectionModal(false)}
+          post={post}
+          targetUser={{
+            uid: post.authorId, // Đảm bảo luôn truyền authorId làm uid cho ConnectionModal
+            fullName: post.authorName || post.author?.name || '',
+            avatar: post.author?.avatar || '',
+            school: post.author?.school || '',
+            major: post.author?.major || ''
+          }}
+        />
       )}
     </div>
   );
