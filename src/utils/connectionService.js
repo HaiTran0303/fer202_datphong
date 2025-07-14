@@ -108,9 +108,9 @@ export const connectionService = {
           const toUserDoc = await getDoc(doc(db, 'users', connection.toUserId));
           if (toUserDoc.exists()) {
             connection.toUser = { uid: toUserDoc.id, ...toUserDoc.data() };
-            console.log('ConnectionService: Fetched toUser:', connection.toUser);
           } else {
-            console.warn('ConnectionService: toUser document not found for ID:', connection.toUserId);
+            connection.toUser = { uid: connection.toUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+            console.warn('ConnectionService: toUser document not found for ID:', connection.toUserId, 'Using placeholder.');
           }
         } else {
           console.warn('ConnectionService: toUserId is undefined for connection:', connection.id);
@@ -167,9 +167,9 @@ export const connectionService = {
           const fromUserDoc = await getDoc(doc(db, 'users', connection.fromUserId));
           if (fromUserDoc.exists()) {
             connection.fromUser = { uid: fromUserDoc.id, ...fromUserDoc.data() };
-            console.log('ConnectionService: Fetched fromUser:', connection.fromUser);
           } else {
-            console.warn('ConnectionService: fromUser document not found for ID:', connection.fromUserId);
+            connection.fromUser = { uid: connection.fromUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+            console.warn('ConnectionService: fromUser document not found for ID:', connection.fromUserId, 'Using placeholder.');
           }
         } else {
           console.warn('ConnectionService: fromUserId is undefined for connection:', connection.id);
@@ -438,7 +438,8 @@ export const connectionService = {
         if (otherUserDoc.exists()) {
           connection.otherUser = { uid: otherUserDoc.id, ...otherUserDoc.data() };
         } else {
-          console.warn('ConnectionService: Other user document not found for ID:', otherUserId);
+          connection.otherUser = { uid: otherUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+          console.warn('ConnectionService: Other user document not found for ID:', otherUserId, 'Using placeholder.');
         }
 
         // Lấy thông tin bài đăng
@@ -462,6 +463,36 @@ export const connectionService = {
       console.error('Error getting active conversations:', error);
       return [];
     }
+  },
+
+  // Lắng nghe thay đổi tin nhắn trong một cuộc trò chuyện cụ thể
+  onMessagesUpdate(connectionId, callback) {
+    if (!db) {
+      console.warn('Firebase not initialized - cannot listen to message changes');
+      return () => {};
+    }
+
+    const q = query(
+      collection(db, MESSAGES_COLLECTION),
+      where('connectionId', '==', connectionId),
+      orderBy('createdAt', 'asc')
+    );
+
+    return onSnapshot(q, (snapshot) => {
+      const messages = [];
+      snapshot.forEach((messageDoc) => {
+        const message = { id: messageDoc.id, ...messageDoc.data() };
+        messages.push({
+          id: message.id,
+          sender: message.fromUserId, // Will map to 'currentUser' or 'otherUser' in Connections.jsx
+          content: message.content,
+          timestamp: message.createdAt?.toDate ? message.createdAt.toDate().toISOString() : new Date().toISOString(),
+          fromUserId: message.fromUserId, // Keep for comparison in frontend
+          toUserId: message.toUserId // Keep for comparison in frontend
+        });
+      });
+      callback(messages);
+    });
   },
 
   // Lắng nghe thay đổi kết nối

@@ -41,7 +41,26 @@ function Connections() {
     fetchConnections();
   }, [currentUser]);
 
-  // Removed debugging useEffect for selectedConversation
+  useEffect(() => {
+    let unsubscribe;
+    if (selectedConversation && selectedConversation.id && currentUser) {
+      unsubscribe = connectionService.onMessagesUpdate(selectedConversation.id, (messages) => {
+        setSelectedConversation(prev => ({
+          ...prev,
+          conversation: messages.map(msg => ({
+            ...msg,
+            sender: msg.fromUserId === currentUser.uid ? 'currentUser' : 'otherUser'
+          }))
+        }));
+      });
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
 
   const fetchConnections = async () => {
     if (!currentUser) {
@@ -119,38 +138,7 @@ function Connections() {
       const connectionId = selectedConversation.id;
 
       await connectionService.sendMessage(connectionId, fromUserId, toUserId, newMessage);
-
-      // Optimistically update UI
-      setSelectedConversation(prev => {
-        console.log('handleSendMessage: prev state for setSelectedConversation:', prev);
-        console.log('handleSendMessage: prev.conversation (before check):', prev?.conversation);
-
-        // Ensure prev is an object before accessing its properties
-        if (!prev) {
-          console.error('handleSendMessage: prev is null or undefined. Cannot update selectedConversation.');
-          // If prev is null, return a new initial state to prevent further errors
-          return { conversation: [] }; 
-        }
-        const currentConversation = Array.isArray(prev.conversation) ? prev.conversation : [];
-        
-        console.log('handleSendMessage: currentConversation (after check):', currentConversation);
-
-        return {
-          ...prev,
-          conversation: [
-            ...currentConversation,
-            {
-              id: Date.now(), // Temporary ID for optimistic update
-              sender: "currentUser",
-              content: newMessage,
-              timestamp: new Date().toISOString()
-            }
-          ],
-          lastMessage: newMessage,
-          lastMessageTime: new Date().toISOString()
-        };
-      });
-      setNewMessage('');
+      setNewMessage(''); // Clear input field
     } catch (error) {
       console.error('Error sending message:', error);
       alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
@@ -627,19 +615,19 @@ function Connections() {
         </div>
       </div>
       {/* Conversation Modal */}
-      {selectedConversation && (
+      {selectedConversation && selectedConversation.otherUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center space-x-3">
                 <img
-                  src={selectedConversation.otherUser.avatar}
-                  alt={selectedConversation.otherUser.name}
+                  src={selectedConversation.otherUser.avatar || 'https://via.placeholder.com/48'}
+                  alt={selectedConversation.otherUser.name || 'Người dùng'}
                   className="w-10 h-10 rounded-full"
                 />
                 <div>
                   <h3 className="font-semibold">
-                    {selectedConversation.otherUser.name}
+                    {selectedConversation.otherUser.name || 'Người dùng'}
                   </h3>
                   <p className="text-sm text-gray-600">
                     {selectedConversation.postTitle}
