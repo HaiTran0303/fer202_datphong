@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { postsService } from '../utils/firebase';
-import { 
-  FileText, 
-  Plus, 
-  Edit3, 
-  Trash2, 
-  Eye, 
-  MapPin, 
-  DollarSign, 
+import axios from 'axios';
+import {
+  FileText,
+  Plus,
+  Edit3,
+  Trash2,
+  Eye,
+  MapPin,
+  DollarSign,
   Clock,
   Search,
   Filter,
   MoreHorizontal
 } from 'lucide-react';
 
+const API_BASE_URL = 'http://localhost:3001';
+
 const MyPosts = () => {
-  const { currentUser } = useAuth();
+  // Removed Firebase auth related state and imports
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,20 +29,28 @@ const MyPosts = () => {
   const [postToDelete, setPostToDelete] = useState(null);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
+    // Removed currentUser check for now, as Firebase auth is removed
+    // You'll need to implement your own authentication system if needed
+    // if (!currentUser) {
+    //   navigate('/login');
+    //   return;
+    // }
     loadMyPosts();
-  }, [currentUser, navigate]);
+  }, [navigate]); // Removed currentUser from dependency array
 
   const loadMyPosts = async () => {
     try {
       setLoading(true);
-      console.log('Loading posts for user:', currentUser.uid);
-      const userPosts = await postsService.getPostsByUser(currentUser.uid);
-      console.log('User posts loaded:', userPosts);
-      setPosts(userPosts);
+      // For json-server, assuming a fixed user ID or fetching all posts for now
+      // If authentication is implemented, replace 'user1' with actual user ID
+      const response = await axios.get(`${API_BASE_URL}/posts`, {
+        params: {
+          // authorId: 'user1', // Uncomment and replace with actual user ID if needed
+        }
+      });
+      const fetchedPosts = response.data;
+      fetchedPosts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setPosts(fetchedPosts);
     } catch (err) {
       setError('Không thể tải tin đăng. Vui lòng thử lại.');
       console.error('Error loading posts:', err);
@@ -52,7 +61,7 @@ const MyPosts = () => {
 
   const handleDeletePost = async (postId) => {
     try {
-      await postsService.deletePost(postId);
+      await axios.delete(`${API_BASE_URL}/posts/${postId}`);
       setPosts(posts.filter(post => post.id !== postId));
       setShowDeleteModal(false);
       setPostToDelete(null);
@@ -110,9 +119,6 @@ const MyPosts = () => {
     }
   };
 
-  if (!currentUser) {
-    return null;
-  }
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">
@@ -330,4 +336,4 @@ const MyPosts = () => {
   );
 };
 
-export default MyPosts; 
+export default MyPosts;

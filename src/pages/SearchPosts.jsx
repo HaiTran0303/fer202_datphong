@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { postsService } from '../utils/firebase';
 import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
 import { 
@@ -21,6 +20,84 @@ import {
   Home,
   Search
 } from 'lucide-react';
+
+
+// Mock data storage for postsService fallback (copied from firebase.js)
+let mockPostsStorage = [
+  {
+    id: 'mock1',
+    title: 'Tìm bạn nữ ghép trọ quận 1',
+    description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
+    price: 3500000,
+    budget: 3500000,
+    location: 'Quận 1, Hồ Chí Minh',
+    district: 'Quận 1',
+    city: 'Hồ Chí Minh',
+    roomType: 'double',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0901234567',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock2',
+    title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
+    description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
+    price: 2800000,
+    budget: 2800000,
+    location: 'Quận 3, Hồ Chí Minh',
+    district: 'Quận 3',
+    city: 'Hồ Chí Minh',
+    roomType: 'apartment',
+    gender: 'male',
+    genderPreference: 'male',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'other-user-456', // Other user's posts
+    authorName: 'Việt Nam',
+    authorPhone: '0902345678',
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock3',
+    title: 'Demo Post - Tìm bạn ghép trọ quận Bình Thạnh',
+    description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
+    price: 3200000,
+    budget: 3200000,
+    location: 'Quận Bình Thạnh, Hồ Chí Minh',
+    district: 'Quận Bình Thạnh',
+    city: 'Hồ Chí Minh',
+    roomType: 'single',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0903456789',
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  }
+];
+
+const getMockPosts = (options = {}) => {
+  return {
+    posts: mockPostsStorage,
+    totalPages: 1,
+    total: mockPostsStorage.length,
+    currentPage: options.page || 1,
+    hasMore: false
+  };
+};
 
 function SearchPosts() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,8 +129,9 @@ function SearchPosts() {
       };
 
       console.log('Searching posts with filters:', searchFilters);
-      const result = await postsService.getPosts(searchFilters);
-      console.log('Search results:', result);
+
+      // Use mock data directly
+      const result = getMockPosts(searchFilters);
       
       setPosts(result.posts || []);
       setTotalPosts(result.total || result.posts?.length || 0);
@@ -123,9 +201,9 @@ function SearchPosts() {
             <div className="space-y-6">
               {/* SearchFilter Component */}
               <SearchFilter 
-                onSearch={handleSearch}
-                onFilter={handleFilterChange}
-                initialFilters={filters}
+                onSearch={handleSearch} 
+                onFilter={handleFilterChange} 
+                initialFilters={filters} 
               />
 
               {/* Sort Options */}
@@ -333,4 +411,32 @@ function SearchPosts() {
   );
 }
 
-export default SearchPosts; 
+export default SearchPosts; <environment_details>
+# VSCode Visible Files
+src/pages/SearchPosts.jsx
+
+# VSCode Open Tabs
+src/utils/constants.js
+src/pages/CreatePost.jsx
+src/pages/EditPost.jsx
+src/pages/Home.jsx
+src/pages/PostDetail.jsx
+src/pages/MyPosts.jsx
+src/pages/SearchPosts.jsx
+src/components/SearchFilter.jsx
+src/utils/firebase.js
+src/components/NotificationDropdown.jsx
+src/pages/Connections.jsx
+src/pages/MyConnections.jsx
+src/components/ConnectionModal.jsx
+src/App.jsx
+
+# Current Time
+7/15/2025, 12:47:33 AM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+676,374 / 1,048.576K tokens used (65%)
+
+# Current Mode
+ACT MODE
+</environment_details>

@@ -1,5 +1,11 @@
 import { forwardRef } from 'react';
-import { cn } from '../../utils/cn';
+
+function cn(...inputs) {
+  return inputs
+    .flat()
+    .filter(Boolean)
+    .join(' ');
+}
 
 const Card = forwardRef(({
   className,
@@ -112,4 +118,4 @@ export {
   CardDescription,
   CardContent,
   CardFooter,
-}; 
+};

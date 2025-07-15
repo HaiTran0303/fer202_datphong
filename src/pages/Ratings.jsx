@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import RatingModal from '../components/RatingModal';
 import { 
   Star, 
@@ -16,7 +15,9 @@ import {
 } from 'lucide-react';
 
 function Ratings() {
-  const { currentUser } = useAuth();
+  // currentUser sẽ cần được cung cấp thông qua một cơ chế khác
+  // Tạm thời để trống hoặc gán giá trị mặc định để tránh lỗi
+  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
   const [activeTab, setActiveTab] = useState('received');
   const [receivedRatings, setReceivedRatings] = useState([]);
   const [givenRatings, setGivenRatings] = useState([]);
@@ -527,4 +528,4 @@ function Ratings() {
   );
 }
 
-export default Ratings; 
+export default Ratings;

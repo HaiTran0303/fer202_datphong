@@ -1,17 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { User, LogOut, FileText, Settings, ChevronDown, UserPlus } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
 const Layout = ({ children }) => {
   const location = useLocation();
-  const { currentUser, logout } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null); // Simulated currentUser
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
+    // Check localStorage for currentUser to simulate login state
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setShowUserDropdown(false);
@@ -24,13 +28,12 @@ const Layout = ({ children }) => {
     };
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setShowUserDropdown(false);
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser'); // Clear user from localStorage
+    setCurrentUser(null); // Clear user from state
+    setShowUserDropdown(false);
+    // Optionally redirect to login page
+    // navigate('/login');
   };
 
   return (
@@ -369,4 +372,4 @@ const Layout = ({ children }) => {
   );
 };
 
-export default Layout; 
+export default Layout;

@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Removed useNavigate
-import { useAuth } from '../hooks/useAuth';
-import { connectionService } from '../utils/connectionService';
+import { Link } from 'react-router-dom';
 import { 
   MessageCircle, 
   UserPlus, 
@@ -21,17 +19,520 @@ import {
   Search
 } from 'lucide-react';
 
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  doc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy, 
+  getDoc,
+  serverTimestamp,
+  onSnapshot
+} from 'firebase/firestore';
+import { db } from '../firebase/config';
+
+// Collections
+const CONNECTIONS_COLLECTION = 'connections';
+const MESSAGES_COLLECTION = 'messages';
+const NOTIFICATIONS_COLLECTION = 'notifications'; // Keep if createNotification is still here and uses it
+
+// Helper functions (formerly from connectionService.js)
+// Gửi lời mời kết nối
+async function sendConnectionRequest(fromUserId, toUserId, postId, message = '') {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - using mock data');
+      return {
+        id: `mock-connection-${Date.now()}`,
+        fromUserId,
+        toUserId,
+        postId,
+        message,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    const connectionData = {
+      fromUserId,
+      toUserId,
+      postId,
+      message,
+      status: 'pending',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
+
+    const docRef = await addDoc(collection(db, CONNECTIONS_COLLECTION), connectionData);
+    
+    // Tạo thông báo cho người nhận
+    await createNotification(toUserId, 'connection_request', {
+      fromUserId,
+      connectionId: docRef.id,
+      postId,
+      message
+    });
+
+    // Tạo tin nhắn đầu tiên (tích hợp với gửi tin nhắn)
+    await addDoc(collection(db, MESSAGES_COLLECTION), {
+      connectionId: docRef.id,
+      fromUserId,
+      toUserId,
+      postId,
+      content: message,
+      type: 'text',
+      createdAt: serverTimestamp(),
+      isSystem: true // đánh dấu là tin nhắn hệ thống (lời mời)
+    });
+
+    return {
+      id: docRef.id,
+      ...connectionData
+    };
+  } catch (error) {
+    console.error('Error sending connection request:', error);
+    throw error;
+  }
+}
+
+// Lấy danh sách lời mời đã gửi
+async function getSentConnections(userId) {
+  try {
+    if (!db) {
+      return [];
+    }
+
+    const q = query(
+      collection(db, CONNECTIONS_COLLECTION),
+      where('fromUserId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const connections = [];
+
+    for (const connectionDoc of querySnapshot.docs) {
+      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
+      
+      // Lấy thông tin người nhận
+      if (connection.toUserId) {
+        const toUserDoc = await getDoc(doc(db, 'users', connection.toUserId));
+        if (toUserDoc.exists()) {
+          connection.toUser = { uid: toUserDoc.id, ...toUserDoc.data() };
+        } else {
+          connection.toUser = { uid: connection.toUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+          console.warn('Connections: toUser document not found for ID:', connection.toUserId, 'Using placeholder.');
+        }
+      } else {
+        console.warn('Connections: toUserId is undefined for connection:', connection.id);
+      }
+
+      // Lấy thông tin bài đăng
+      if (connection.postId) {
+        const postDoc = await getDoc(doc(db, 'posts', connection.postId));
+        if (postDoc.exists()) {
+          connection.post = { id: postDoc.id, ...postDoc.data() };
+        } else {
+          console.warn('Connections: Post document not found for ID:', connection.postId);
+        }
+      } else {
+        console.warn('Connections: postId is undefined for connection:', connection.id);
+      }
+
+      connections.push(connection);
+    }
+
+    return connections;
+  } catch (error) {
+    console.error('Error getting sent connections:', error);
+    return [];
+  }
+}
+
+// Lấy danh sách lời mời đã nhận
+async function getReceivedConnections(userId) {
+  try {
+    if (!db) {
+      return [];
+    }
+
+    const q = query(
+      collection(db, CONNECTIONS_COLLECTION),
+      where('toUserId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+
+    const querySnapshot = await getDocs(q);
+    const connections = [];
+
+    for (const connectionDoc of querySnapshot.docs) {
+      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
+      
+      // Lấy thông tin người gửi
+      if (connection.fromUserId) {
+        const fromUserDoc = await getDoc(doc(db, 'users', connection.fromUserId));
+        if (fromUserDoc.exists()) {
+          connection.fromUser = { uid: fromUserDoc.id, ...fromUserDoc.data() };
+        } else {
+          connection.fromUser = { uid: connection.fromUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+          console.warn('Connections: fromUser document not found for ID:', connection.fromUserId, 'Using placeholder.');
+        }
+      } else {
+        console.warn('Connections: fromUserId is undefined for connection:', connection.id);
+      }
+
+      // Lấy thông tin bài đăng
+      if (connection.postId) {
+        const postDoc = await getDoc(doc(db, 'posts', connection.postId));
+        if (postDoc.exists()) {
+          connection.post = { id: postDoc.id, ...postDoc.data() };
+        } else {
+          console.warn('Connections: Post document not found for ID:', connection.postId);
+        }
+      } else {
+        console.warn('Connections: postId is undefined for connection:', connection.id);
+      }
+
+      connections.push(connection);
+    }
+
+    return connections;
+  } catch (error) {
+    console.error('Error getting received connections:', error);
+    return [];
+  }
+}
+
+// Chấp nhận lời mời kết nối
+async function acceptConnection(connectionId) {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - using mock data');
+      return { success: true };
+    }
+
+    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
+    const connectionDoc = await getDoc(connectionRef);
+    
+    if (!connectionDoc.exists()) {
+      throw new Error('Connection not found');
+    }
+
+    const connection = connectionDoc.data();
+    
+    // Cập nhật trạng thái
+    await updateDoc(connectionRef, {
+      status: 'accepted',
+      updatedAt: serverTimestamp()
+    });
+
+    // Tạo thông báo cho người gửi
+    await createNotification(connection.fromUserId, 'connection_accepted', {
+      toUserId: connection.toUserId,
+      connectionId,
+      postId: connection.postId
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error accepting connection:', error);
+    throw error;
+  }
+}
+
+// Từ chối lời mời kết nối
+async function declineConnection(connectionId) {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - using mock data');
+      return { success: true };
+    }
+
+    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
+    const connectionDoc = await getDoc(connectionRef);
+    
+    if (!connectionDoc.exists()) {
+      throw new Error('Connection not found');
+    }
+
+    const connection = connectionDoc.data();
+    
+    // Cập nhật trạng thái
+    await updateDoc(connectionRef, {
+      status: 'declined',
+      updatedAt: serverTimestamp()
+    });
+
+    // Tạo thông báo cho người gửi
+    await createNotification(connection.fromUserId, 'connection_declined', {
+      toUserId: connection.toUserId,
+      connectionId,
+      postId: connection.postId
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error declining connection:', error);
+    throw error;
+  }
+}
+
+// Hủy lời mời kết nối
+async function cancelConnection(connectionId) {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - using mock data');
+      return { success: true };
+    }
+
+    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
+    const connectionDoc = await getDoc(connectionRef);
+    
+    if (!connectionDoc.exists()) {
+      throw new Error('Connection not found');
+    }
+
+    const connection = connectionDoc.data();
+    
+    // Xóa lời mời
+    await deleteDoc(connectionRef);
+
+    // Tạo thông báo cho người nhận
+    await createNotification(connection.toUserId, 'connection_cancelled', {
+      fromUserId: connection.fromUserId,
+      connectionId,
+      postId: connection.postId
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error cancelling connection:', error);
+    throw error;
+  }
+}
+
+// Tạo thông báo (This function is kept here because sendConnectionRequest and other functions in this file use it)
+async function createNotification(userId, type, data) {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - skipping notification');
+      return;
+    }
+
+    const notificationData = {
+      userId,
+      type,
+      data,
+      isRead: false,
+      createdAt: serverTimestamp()
+    };
+
+    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), notificationData);
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+}
+
+
+// Gửi tin nhắn
+async function sendMessage(connectionId, fromUserId, toUserId, content, type = 'text') {
+  try {
+    if (!db) {
+      console.warn('Firebase not initialized - skipping send message');
+      return;
+    }
+    const messageData = {
+      connectionId,
+      fromUserId,
+      toUserId,
+      content,
+      type,
+      createdAt: serverTimestamp()
+    };
+    await addDoc(collection(db, MESSAGES_COLLECTION), messageData);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
+  }
+}
+
+// Lấy tất cả các cuộc trò chuyện đang hoạt động (kết nối đã chấp nhận)
+async function getActiveConversations(userId) {
+  try {
+    if (!db) {
+      return [];
+    }
+    // Lấy các kết nối đã chấp nhận mà người dùng hiện tại là fromUserId hoặc toUserId
+    const q1 = query(
+      collection(db, CONNECTIONS_COLLECTION),
+      where('fromUserId', '==', userId),
+      where('status', '==', 'accepted')
+    );
+    const q2 = query(
+      collection(db, CONNECTIONS_COLLECTION),
+      where('toUserId', '==', userId),
+      where('status', '==', 'accepted')
+    );
+
+    const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    const connections = [];
+
+    const processConnection = async (connectionDoc) => {
+      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
+      
+      // Lấy thông tin người dùng khác trong cuộc trò chuyện
+      const otherUserId = connection.fromUserId === userId ? connection.toUserId : connection.fromUserId;
+      const otherUserDoc = await getDoc(doc(db, 'users', otherUserId));
+      if (otherUserDoc.exists()) {
+        connection.otherUser = { uid: otherUserDoc.id, ...otherUserDoc.data() };
+      } else {
+        connection.otherUser = { uid: otherUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
+        console.warn('Connections: Other user document not found for ID:', otherUserId, 'Using placeholder.');
+      }
+
+      // Lấy thông tin bài đăng
+      const postDoc = await getDoc(doc(db, 'posts', connection.postId));
+      if (postDoc.exists()) {
+        connection.post = { id: postDoc.id, ...postDoc.data() };
+      } else {
+        console.warn('Connections: Post document not found for ID:', connection.postId);
+      }
+      connections.push(connection);
+    };
+
+    await Promise.all(snapshot1.docs.map(processConnection));
+    await Promise.all(snapshot2.docs.map(processConnection));
+
+    // Sắp xếp theo thời gian cập nhật gần nhất (hoặc tin nhắn cuối cùng)
+    connections.sort((a, b) => (b.updatedAt?.toDate() || 0) - (a.updatedAt?.toDate() || 0));
+
+    return connections;
+  } catch (error) {
+    console.error('Error getting active conversations:', error);
+    return [];
+  }
+}
+
+// Lắng nghe thay đổi tin nhắn trong một cuộc trò chuyện cụ thể
+function onMessagesUpdate(connectionId, callback) {
+  if (!db) {
+    console.warn('Firebase not initialized - cannot listen to message changes');
+    return () => {};
+  }
+
+  const q = query(
+    collection(db, MESSAGES_COLLECTION),
+    where('connectionId', '==', connectionId),
+    orderBy('createdAt', 'asc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = [];
+    snapshot.forEach((messageDoc) => {
+      const message = { id: messageDoc.id, ...messageDoc.data() };
+      messages.push({
+        id: message.id,
+        sender: message.fromUserId, // Will map to 'currentUser' or 'otherUser' in Connections.jsx
+        content: message.content,
+        timestamp: message.createdAt?.toDate ? message.createdAt.toDate().toISOString() : new Date().toISOString(),
+        fromUserId: message.fromUserId, // Keep for comparison in frontend
+        toUserId: message.toUserId // Keep for comparison in frontend
+      });
+    });
+    callback(messages);
+  });
+}
+
+// Lắng nghe thay đổi kết nối
+function onConnectionsChange(userId, callback) {
+  if (!db) {
+    console.warn('Firebase not initialized - cannot listen to changes');
+    return () => {};
+  }
+
+  const q = query(
+    collection(db, CONNECTIONS_COLLECTION),
+    where('toUserId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const connections = [];
+    snapshot.forEach((connectionDoc) => {
+      connections.push({ id: connectionDoc.id, ...connectionDoc.data() });
+    });
+    callback(connections);
+  });
+}
+
+// Lấy tin nhắn theo connectionId
+async function getMessagesByConnectionId(connectionId) {
+  try {
+    if (!db) {
+      return [];
+    }
+
+    const q = query(
+      collection(db, MESSAGES_COLLECTION),
+      where('connectionId', '==', connectionId),
+      orderBy('createdAt', 'asc')
+    );
+
+    console.log('Connections: Querying messages for connectionId:', connectionId);
+    const querySnapshot = await getDocs(q);
+    console.log('Connections: querySnapshot size:', querySnapshot.size);
+    const messages = [];
+
+    for (const messageDoc of querySnapshot.docs) {
+      const message = { id: messageDoc.id, ...messageDoc.data() };
+      
+      // Lấy thông tin người gửi
+      if (message.fromUserId) {
+        const fromUserDoc = await getDoc(doc(db, 'users', message.fromUserId));
+        if (fromUserDoc.exists()) {
+          message.fromUser = fromUserDoc.data();
+        } else {
+          console.warn('Connections: Message sender (fromUser) document not found for ID:', message.fromUserId);
+        }
+      } else {
+        console.warn('Connections: Message has undefined fromUserId for message:', message.id);
+      }
+      // Lấy thông tin người nhận
+      if (message.toUserId) {
+        const toUserDoc = await getDoc(doc(db, 'users', message.toUserId));
+        if (toUserDoc.exists()) {
+          message.toUser = toUserDoc.data();
+        } else {
+          console.warn('Connections: Message receiver (toUser) document not found for ID:', message.toUserId);
+        }
+      } else {
+        console.warn('Connections: Message has undefined toUserId for message:', message.id);
+      }
+      messages.push(message);
+    }
+    console.log('Connections: Messages array before return:', messages);
+    return messages;
+  } catch (error) {
+    console.error('Error getting messages by connection ID:', error);
+    return [];
+  }
+}
+
 function Connections() {
-  const { currentUser } = useAuth();
-  // Removed useNavigate as it's not directly used for navigation in this component
-  const [activeTab, setActiveTab] = useState('messages');
-  // Re-added 'messages' state to display active conversations in the "Tin nhắn" tab
+  // currentUser sẽ cần được cung cấp thông qua một cơ chế khác
+  // Tạm thời để trống hoặc gán giá trị mặc định để tránh lỗi
+  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
+  const [activeTab, setActiveTab] = useState('messages'); 
   const [messages, setMessages] = useState([]); 
   const [sentInvitations, setSentInvitations] = useState([]);
   const [receivedInvitations, setReceivedInvitations] = useState([]);
-  const [matches, setMatches] = useState([]); // Still mocked for now
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] }); // Initialize with conversation as an array
+  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] });
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -39,12 +540,62 @@ function Connections() {
 
   useEffect(() => {
     fetchConnections();
-  }, [currentUser]);
+
+    // Setup real-time listener for connections/invitations
+    let unsubscribeConnections;
+    if (currentUser) {
+      unsubscribeConnections = onConnectionsChange(currentUser.uid, async (connections) => {
+        // Re-fetch full user and post data for real-time updates
+        const sent = [];
+        const received = [];
+
+        for (const conn of connections) {
+          if (conn.fromUserId === currentUser.uid) {
+            // Sent invitation
+            const toUserDoc = await getDoc(doc(db, 'users', conn.toUserId));
+            const postDoc = await getDoc(doc(db, 'posts', conn.postId));
+            sent.push({
+              id: conn.id,
+              type: 'sent',
+              toUser: toUserDoc.exists() ? { uid: toUserDoc.id, ...toUserDoc.data() } : { uid: conn.toUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' },
+              postId: conn.postId,
+              postTitle: postDoc.exists() ? postDoc.data().title : 'Bài đăng',
+              message: conn.message,
+              timestamp: conn.createdAt,
+              status: conn.status
+            });
+          } else if (conn.toUserId === currentUser.uid) {
+            // Received invitation
+            const fromUserDoc = await getDoc(doc(db, 'users', conn.fromUserId));
+            const postDoc = await getDoc(doc(db, 'posts', conn.postId));
+            received.push({
+              id: conn.id,
+              type: 'received',
+              fromUser: fromUserDoc.exists() ? { uid: fromUserDoc.id, ...fromUserDoc.data() } : { uid: conn.fromUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' },
+              postId: conn.postId,
+              postTitle: postDoc.exists() ? postDoc.data().title : 'Bài đăng',
+              message: conn.message,
+              timestamp: conn.createdAt,
+              status: conn.status
+            });
+          }
+        }
+        setSentInvitations(sent);
+        setReceivedInvitations(received);
+      });
+    }
+
+    return () => {
+      if (unsubscribeConnections) {
+        unsubscribeConnections();
+      }
+    };
+  }, [currentUser]); // Only re-run if currentUser changes
 
   useEffect(() => {
-    let unsubscribe;
+    let unsubscribeMessages;
     if (selectedConversation && selectedConversation.id && currentUser) {
-      unsubscribe = connectionService.onMessagesUpdate(selectedConversation.id, (messages) => {
+      unsubscribeMessages = onMessagesUpdate(selectedConversation.id, (messages) => {
         setSelectedConversation(prev => ({
           ...prev,
           conversation: messages.map(msg => ({
@@ -56,8 +607,8 @@ function Connections() {
     }
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
+      if (unsubscribeMessages) {
+        unsubscribeMessages();
       }
     };
   }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
@@ -71,9 +622,9 @@ function Connections() {
     console.log('Connections: Fetching connections for user ID:', currentUser.uid);
     try {
       const [sentConnections, receivedConnections, activeConversations] = await Promise.all([
-        connectionService.getSentConnections(currentUser.uid),
-        connectionService.getReceivedConnections(currentUser.uid),
-        connectionService.getActiveConversations(currentUser.uid) // Fetch active conversations
+        getSentConnections(currentUser.uid),
+        getReceivedConnections(currentUser.uid),
+        getActiveConversations(currentUser.uid)
       ]);
 
       console.log('Connections: Raw fetched sent connections:', sentConnections);
@@ -102,14 +653,13 @@ function Connections() {
         status: conn.status
       }));
 
-      // Map active conversations to messages state format
       const mappedMessages = activeConversations.map(conv => ({
         id: conv.id,
-        otherUser: conv.otherUser, // This should now be populated by getActiveConversations
+        otherUser: conv.otherUser,
         postTitle: conv.post?.title || 'Bài đăng',
-        lastMessage: conv.message, // Use the connection message as last message for now
+        lastMessage: conv.message,
         lastMessageTime: conv.updatedAt?.toDate ? conv.updatedAt.toDate().toISOString() : new Date().toISOString(),
-        unread: false // Placeholder, actual unread count would need more logic
+        unread: false
       }));
 
       console.log('Connections: Transformed sent invitations:', sent);
@@ -119,7 +669,7 @@ function Connections() {
 
       setSentInvitations(sent);
       setReceivedInvitations(received);
-      setMessages(mappedMessages); // Set messages state
+      setMessages(mappedMessages);
       setMatches([]);
     } catch (error) {
       console.error('Connections: Error fetching connections:', error);
@@ -129,7 +679,7 @@ function Connections() {
     }
   };
 
-  const handleSendMessage = async () => { // Made async
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
@@ -137,8 +687,8 @@ function Connections() {
       const toUserId = selectedConversation.otherUser.uid;
       const connectionId = selectedConversation.id;
 
-      await connectionService.sendMessage(connectionId, fromUserId, toUserId, newMessage);
-      setNewMessage(''); // Clear input field
+      await sendMessage(connectionId, fromUserId, toUserId, newMessage);
+      setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
       alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
@@ -148,22 +698,19 @@ function Connections() {
   const handleInvitationResponse = async (invitationId, response) => {
     try {
       if (response === 'accept') {
-        await connectionService.acceptConnection(invitationId);
+        await acceptConnection(invitationId);
         const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
         if (acceptedInvitation) {
           console.log('Connections: Accepted Invitation:', acceptedInvitation);
           console.log('Connections: acceptedInvitation.fromUser:', acceptedInvitation.fromUser);
           console.log('Connections: acceptedInvitation.toUser:', acceptedInvitation.toUser);
 
-          // Fallback for otherUser if fromUser/toUser are undefined
           let otherUser;
           if (acceptedInvitation.fromUser && acceptedInvitation.fromUser.uid) {
             otherUser = (acceptedInvitation.fromUser.uid === currentUser.uid)
               ? acceptedInvitation.toUser
               : acceptedInvitation.fromUser;
           } else {
-            // Fallback: Create a dummy otherUser object
-            // This happens if fromUser/toUser are not populated by connectionService
             const targetUserId = acceptedInvitation.fromUserId === currentUser.uid
               ? acceptedInvitation.toUserId
               : acceptedInvitation.fromUserId;
@@ -171,7 +718,7 @@ function Connections() {
             otherUser = {
               uid: targetUserId,
               name: "Người dùng không xác định",
-              avatar: "https://via.placeholder.com/48", // Placeholder for avatar
+              avatar: "https://via.placeholder.com/48",
             };
             console.warn('Connections: Using fallback otherUser due to undefined fromUser/toUser in acceptedInvitation:', acceptedInvitation);
           }
@@ -183,10 +730,9 @@ function Connections() {
           }
           console.log('Connections: Determined otherUser:', otherUser);
           
-          const conversationMessages = await connectionService.getMessagesByConnectionId(invitationId);
+          const conversationMessages = await getMessagesByConnectionId(invitationId);
           console.log('Connections: Fetched conversation messages (raw):', conversationMessages);
 
-          // Ensure conversationMessages is an array before mapping
           const mappedConversation = Array.isArray(conversationMessages)
             ? conversationMessages.map(msg => ({
                 id: msg.id,
@@ -194,7 +740,7 @@ function Connections() {
                 content: msg.content,
                 timestamp: msg.createdAt?.toDate ? msg.createdAt.toDate().toISOString() : new Date().toISOString()
               }))
-            : []; // Default to empty array if not an array
+            : [];
           
           console.log('Connections: Mapped conversation (before setting state):', mappedConversation);
 
@@ -202,7 +748,7 @@ function Connections() {
             id: acceptedInvitation.id, 
             otherUser: otherUser,
             postTitle: acceptedInvitation.postTitle,
-            conversation: Array.isArray(mappedConversation) ? mappedConversation : [], // Explicitly ensure it's an array
+            conversation: Array.isArray(mappedConversation) ? mappedConversation : [],
             lastMessage: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].content : '',
             lastMessageTime: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].timestamp : new Date().toISOString()
           };
@@ -213,7 +759,7 @@ function Connections() {
           setActiveTab('messages');
         }
       } else {
-        await connectionService.declineConnection(invitationId);
+        await declineConnection(invitationId);
       }
 
       const updatedInvitations = [...sentInvitations, ...receivedInvitations].map(inv => {
@@ -248,8 +794,7 @@ function Connections() {
   const getUnreadCount = (type) => {
     switch (type) {
       case 'messages':
-        // Assuming messages state now holds all active conversations, count unread if applicable
-        return messages.filter(msg => msg.unread).length; // Re-enable unread count if applicable
+        return messages.filter(msg => msg.unread).length;
       case 'invitations':
         return [...sentInvitations, ...receivedInvitations].filter(inv => inv.status === 'pending').length;
       case 'matches':
@@ -314,6 +859,20 @@ function Connections() {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Kết nối</h1>
         <p className="text-gray-600">Quản lý tin nhắn, lời mời và gợi ý kết nối</p>
+        {/* Placeholder button to demonstrate sendConnectionRequest */}
+        <button 
+          onClick={() => sendConnectionRequest(currentUser.uid, 'some_other_user_id', 'some_post_id', 'Hello from Connections!')}
+          className="mt-4 bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600"
+        >
+          Test Send Connection Request
+        </button>
+        {/* Placeholder button to demonstrate cancelConnection */}
+        <button 
+          onClick={() => cancelConnection('some_connection_id_to_cancel')} // Replace with an actual connection ID for testing
+          className="mt-4 ml-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+        >
+          Test Cancel Connection
+        </button>
       </div>
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-lg mb-6">
@@ -349,7 +908,7 @@ function Connections() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Tìm kiếm theo tên hoặc bài đăng..."
+              placeholder="Nhập tìm kiếm..."
             />
           </div>
         </div>
@@ -675,10 +1234,10 @@ function Connections() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Nhập tin nhắn..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} // Removed conversationId param
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 />
                 <button
-                  onClick={() => handleSendMessage()} // Removed conversationId param
+                  onClick={() => handleSendMessage()}
                   className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
                 >
                   <Send size={20} />

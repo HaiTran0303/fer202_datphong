@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { postsService } from '../utils/firebase';
 import ConnectionModal from '../components/ConnectionModal';
 import { 
   MapPin, 
@@ -29,11 +27,86 @@ import {
   UserPlus
 } from 'lucide-react';
 
+// Mock data storage for postsService fallback (copied from firebase.js)
+
+// Mock data storage for postsService fallback (copied from firebase.js)
+let mockPostsStorage = [
+  {
+    id: 'mock1',
+    title: 'Tìm bạn nữ ghép trọ quận 1',
+    description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
+    price: 3500000,
+    budget: 3500000,
+    location: 'Quận 1, Hồ Chí Minh',
+    district: 'Quận 1',
+    city: 'Hồ Chí Minh',
+    roomType: 'double',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0901234567',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock2',
+    title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
+    description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
+    price: 2800000,
+    budget: 2800000,
+    location: 'Quận 3, Hồ Chí Minh',
+    district: 'Quận 3',
+    city: 'Hồ Chí Minh',
+    roomType: 'apartment',
+    gender: 'male',
+    genderPreference: 'male',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'other-user-456', // Other user's posts
+    authorName: 'Việt Nam',
+    authorPhone: '0902345678',
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  },
+  {
+    id: 'mock3',
+    title: 'Demo Post - Tìm bạn ghép trọ quận Bình Thạnh',
+    description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
+    price: 3200000,
+    budget: 3200000,
+    location: 'Quận Bình Thạnh, Hồ Chí Minh',
+    district: 'Quận Bình Thạnh',
+    city: 'Hồ Chí Minh',
+    roomType: 'single',
+    gender: 'female',
+    genderPreference: 'female',
+    type: 'roommate-search',
+    status: 'active',
+    authorId: 'demo-user-123', // Demo user's posts
+    authorName: 'Demo User',
+    authorPhone: '0903456789',
+    createdAt: new Date(Date.now() - 259200000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    images: ['/api/placeholder/400/300']
+  }
+];
+
 function PostDetail() {
   const { id } = useParams();
-  const { currentUser } = useAuth();
   const navigate = useNavigate();
   
+  // Mock current user for demo purposes
+  const currentUser = {
+    uid: 'demo-user-id',
+    email: 'demo@example.com',
+    displayName: 'Demo User'
+  };
+
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -43,8 +116,6 @@ function PostDetail() {
   const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
-
-
 
   const amenitiesLabels = {
     wifi: 'WiFi',
@@ -81,8 +152,15 @@ function PostDetail() {
         return;
       }
       
-      // Get post from Firebase
-      const postData = await postsService.getPostById(id);
+      // getPostById function (moved from firebase.js)
+      const getPostById = async (postId) => {
+        // Simulate fetching post data from mock storage
+        const post = mockPostsStorage.find(p => p.id === postId);
+        return post || null; 
+      };
+
+      // Get post from mock data
+      const postData = await getPostById(id);
       
       if (!postData) {
         console.error('Post not found');
@@ -288,6 +366,7 @@ function PostDetail() {
               <button
                 onClick={prevImage}
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                tabIndex="0"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -295,6 +374,7 @@ function PostDetail() {
               <button
                 onClick={nextImage}
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                tabIndex="0"
               >
                 <ChevronRight size={20} />
               </button>
@@ -309,6 +389,7 @@ function PostDetail() {
                 className={`w-3 h-3 rounded-full ${
                   index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
                 }`}
+                tabIndex="0"
               />
             ))}
           </div>
@@ -325,6 +406,7 @@ function PostDetail() {
                   index === currentImageIndex ? 'ring-2 ring-blue-500' : ''
                 }`}
                 onClick={() => setCurrentImageIndex(index)}
+                tabIndex="0"
               />
             ))}
           </div>
@@ -542,15 +624,17 @@ function PostDetail() {
                 <button
                   onClick={prevImage}
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                  tabIndex="0"
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft size={20} />
                 </button>
                 
                 <button
                   onClick={nextImage}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                  tabIndex="0"
                 >
-                  <ChevronRight size={24} />
+                  <ChevronRight size={20} />
                 </button>
               </>
             )}

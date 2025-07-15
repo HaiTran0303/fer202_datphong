@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { 
-  Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
-  User, 
+import axios from 'axios';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  User,
   Phone
 } from 'lucide-react';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -24,7 +26,6 @@ function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -80,24 +81,41 @@ function Register() {
     try {
       setError('');
       setLoading(true);
-      await register(formData.email, formData.password, {
-        fullName: formData.fullName,
-        phone: formData.phone
+      
+      // Check if user already exists
+      const existingUsers = await axios.get(`${API_BASE_URL}/users`, {
+        params: { email: formData.email }
       });
-      navigate('/');
+
+      if (existingUsers.data.length > 0) {
+        setError('Email đã được đăng ký.');
+        setLoading(false);
+        return;
+      }
+
+      // Register user by creating a new entry in db.json
+      const newUser = {
+        email: formData.email,
+        password: formData.password, // In a real app, hash this!
+        fullName: formData.fullName,
+        phone: formData.phone,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        // Add other default profile fields if necessary
+      };
+      
+      await axios.post(`${API_BASE_URL}/users`, newUser);
+      
+      alert('Đăng ký thành công! Vui lòng đăng nhập.');
+      navigate('/login');
     } catch (err) {
       console.error('Registration error:', err);
       
       let errorMessage = 'Đăng ký thất bại. Vui lòng thử lại.';
-      
-      if (err.code === 'auth/email-already-in-use') {
-        errorMessage = 'Email đã được sử dụng';
-      } else if (err.code === 'auth/weak-password') {
-        errorMessage = 'Mật khẩu quá yếu';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Email không hợp lệ';
-      } else if (err.code === 'auth/network-request-failed') {
-        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet';
+      if (axios.isAxiosError(err) && err.response) {
+        errorMessage = `Lỗi từ server: ${err.response.status} - ${err.response.statusText}`;
+      } else if (axios.isAxiosError(err) && !err.response) {
+        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet hoặc json-server đang chạy.';
       }
       
       setError(errorMessage);
@@ -337,4 +355,4 @@ function Register() {
   );
 }
 
-export default Register; 
+export default Register;

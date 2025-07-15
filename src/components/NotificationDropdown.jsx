@@ -1,11 +1,47 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, X, UserPlus, MessageCircle, Heart } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { connectionService } from '../utils/connectionService';
 import { Link } from 'react-router-dom';
+// Mock user data for notifications
+const mockUsers = [
+  { uid: 'fake-uid-123', fullName: 'Demo User', avatar: 'https://via.placeholder.com/48' },
+  { uid: 'other-user-456', fullName: 'Nguyễn Văn A', avatar: 'https://via.placeholder.com/48' },
+  { uid: 'another-user-789', fullName: 'Trần Thị B', avatar: 'https://via.placeholder.com/48' },
+];
+
+// Mock notifications data
+let mockNotifications = [];
+
+// Helper functions for notifications (mock implementations)
+async function getNotifications(userId) {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  return mockNotifications.filter(n => n.userId === userId).map(n => {
+    if (n.type === 'connection_request' && n.data.fromUserId) {
+      n.fromUser = mockUsers.find(u => u.uid === n.data.fromUserId);
+    }
+    return n;
+  }).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+async function markNotificationAsRead(notificationId) {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const notification = mockNotifications.find(n => n.id === notificationId);
+  if (notification) {
+    notification.isRead = true;
+    notification.updatedAt = new Date().toISOString();
+  }
+}
+
+function onNotificationsChange(userId, callback) {
+  // Simulate real-time updates by re-fetching notifications periodically
+  const interval = setInterval(async () => {
+    const notifications = mockNotifications.filter(n => n.userId === userId);
+    callback(notifications);
+  }, 1000); // Update every 1 second for demo
+  return () => clearInterval(interval); // Cleanup function
+}
 
 function NotificationDropdown() {
-  const { currentUser } = useAuth();
+  const currentUser = mockUsers[0]; // Assume the first mock user is always logged in for demo
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -13,11 +49,41 @@ function NotificationDropdown() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
+    // Initialize mock data if not already present
+    if (mockNotifications.length === 0) {
+      mockNotifications = [
+        {
+          id: 'notif1',
+          userId: currentUser.uid,
+          type: 'connection_request',
+          data: { fromUserId: 'other-user-456', message: 'Bạn có lời mời kết nối mới từ Nguyễn Văn A' },
+          isRead: false,
+          createdAt: new Date(Date.now() - 3600000).toISOString(),
+        },
+        {
+          id: 'notif2',
+          userId: currentUser.uid,
+          type: 'connection_accepted',
+          data: { toUserId: 'another-user-789' },
+          isRead: false,
+          createdAt: new Date(Date.now() - 7200000).toISOString(),
+        },
+        {
+          id: 'notif3',
+          userId: currentUser.uid,
+          type: 'message',
+          data: { fromUserId: 'other-user-456', message: 'Nguyễn Văn A đã gửi tin nhắn cho bạn' },
+          isRead: true,
+          createdAt: new Date(Date.now() - 10800000).toISOString(),
+        },
+      ];
+    }
+
     if (currentUser) {
       loadNotifications();
       
       // Listen for real-time updates
-      const unsubscribe = connectionService.onNotificationsChange(currentUser.uid, (newNotifications) => {
+      const unsubscribe = onNotificationsChange(currentUser.uid, (newNotifications) => {
         setNotifications(newNotifications);
         setUnreadCount(newNotifications.filter(n => !n.isRead).length);
       });
@@ -31,7 +97,7 @@ function NotificationDropdown() {
     
     setLoading(true);
     try {
-      const data = await connectionService.getNotifications(currentUser.uid);
+      const data = await getNotifications(currentUser.uid);
       setNotifications(data);
       setUnreadCount(data.filter(n => !n.isRead).length);
     } catch (error) {
@@ -43,7 +109,7 @@ function NotificationDropdown() {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await connectionService.markNotificationAsRead(notificationId);
+      await markNotificationAsRead(notificationId);
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
@@ -57,7 +123,7 @@ function NotificationDropdown() {
     try {
       const unreadNotifications = notifications.filter(n => !n.isRead);
       await Promise.all(
-        unreadNotifications.map(n => connectionService.markNotificationAsRead(n.id))
+        unreadNotifications.map(n => markNotificationAsRead(n.id))
       );
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
@@ -164,7 +230,7 @@ function NotificationDropdown() {
               </div>
             ) : notifications.length === 0 ? (
               <div className="p-4 text-center">
-                <Bell size={24} className="text-gray-400 mx-auto mb-2" />
+                <Bell size={24} className="mx-auto" />
                 <p className="text-sm text-gray-600">Chưa có thông báo nào</p>
               </div>
             ) : (
@@ -255,4 +321,4 @@ const formatTime = (timestamp) => {
   return date.toLocaleDateString('vi-VN');
 };
 
-export default NotificationDropdown; 
+export default NotificationDropdown;
