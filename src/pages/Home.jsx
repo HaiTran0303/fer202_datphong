@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { postsService } from '../utils/firebase';
 import PostCard from '../components/PostCard';
 import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
 import { LOCATIONS } from '../utils/constants';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 const Home = () => {
   const [posts, setPosts] = useState([]);
@@ -21,74 +23,73 @@ const Home = () => {
     try {
       setLoading(true);
       console.log('Loading posts with filters:', filters, 'search:', searchTerm);
-      
-      // Build query parameters
+
       const queryParams = {
-        ...filters,
-        page: currentPage,
-        limit: 20,
-        sortBy
+        _page: currentPage,
+        _limit: 20,
       };
 
-      // Add search term if exists
       if (searchTerm.trim()) {
-        queryParams.search = searchTerm.trim();
+        queryParams.q = searchTerm.trim();
       }
 
-      const result = await postsService.getPosts(queryParams);
-      
-      console.log('Posts loaded:', result);
-      
-      let filteredPosts = result.posts || [];
-
-      // Client-side filtering for price range
-      if (filters.priceMin !== undefined && filters.priceMax !== undefined) {
-        filteredPosts = filteredPosts.filter(post => 
-          post.price >= filters.priceMin && post.price <= filters.priceMax
-        );
-      } else if (filters.priceMin !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.price >= filters.priceMin);
-      } else if (filters.priceMax !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.price <= filters.priceMax);
+      if (filters.location) {
+        queryParams.location = filters.location;
+      }
+      if (filters.district) {
+        queryParams.district = filters.district;
+      }
+      if (filters.category) {
+        queryParams.category = filters.category;
       }
 
-      // Client-side filtering for area range
-      if (filters.areaMin !== undefined && filters.areaMax !== undefined) {
-        filteredPosts = filteredPosts.filter(post => 
-          post.area >= filters.areaMin && post.area <= filters.areaMax
-        );
-      } else if (filters.areaMin !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.area >= filters.areaMin);
-      } else if (filters.areaMax !== undefined) {
-        filteredPosts = filteredPosts.filter(post => post.area <= filters.areaMax);
+      // Filter by price range
+      if (filters.priceMin !== undefined) {
+        queryParams.price_gte = filters.priceMin;
+      }
+      if (filters.priceMax !== undefined) {
+        queryParams.price_lte = filters.priceMax;
       }
 
-      // Client-side filtering for amenities (assuming post.amenities is an array of strings)
+      // Filter by area range
+      if (filters.areaMin !== undefined) {
+        queryParams.area_gte = filters.areaMin;
+      }
+      if (filters.areaMax !== undefined) {
+        queryParams.area_lte = filters.areaMax;
+      }
+
+      // Sorting logic for json-server
+      if (sortBy === 'newest' || sortBy === 'createdAt') {
+        queryParams._sort = 'createdAt';
+        queryParams._order = 'desc';
+      } else if (sortBy === 'price') {
+        queryParams._sort = 'price';
+        queryParams._order = 'asc';
+      } else if (sortBy === 'priceDesc') {
+        queryParams._sort = 'price';
+        queryParams._order = 'desc';
+      }
+      // Note: 'hasVideo' sorting might need custom logic or be removed if not directly supported by json-server
+
+      const response = await axios.get(`${API_BASE_URL}/posts`, { params: queryParams });
+      const totalCount = parseInt(response.headers['x-total-count'], 10);
+
+      let fetchedPosts = response.data;
+
+      // Client-side filtering for amenities if json-server doesn't support it directly
       if (filters.amenities && filters.amenities.length > 0) {
-        filteredPosts = filteredPosts.filter(post => 
+        fetchedPosts = fetchedPosts.filter(post =>
           filters.amenities.every(amenity => post.amenities?.includes(amenity))
         );
       }
 
-      // Client-side search filtering
-      if (searchTerm.trim()) {
-        const searchLower = searchTerm.toLowerCase();
-        filteredPosts = filteredPosts.filter(post => 
-          post.title?.toLowerCase().includes(searchLower) ||
-          post.description?.toLowerCase().includes(searchLower) ||
-          post.location?.toLowerCase().includes(searchLower) ||
-          post.address?.toLowerCase().includes(searchLower)
-        );
-      }
-
-      setPosts(filteredPosts);
-      setTotalPages(result.totalPages || 1);
-      setTotalPosts(filteredPosts.length);
+      setPosts(fetchedPosts);
+      setTotalPages(Math.ceil(totalCount / 20));
+      setTotalPosts(totalCount);
     } catch (err) {
       setError('Có lỗi xảy ra khi tải dữ liệu');
       console.error('Error loading posts:', err);
-      
-      // Fallback to empty state
       setPosts([]);
       setTotalPages(1);
       setTotalPosts(0);
@@ -100,7 +101,10 @@ const Home = () => {
   useEffect(() => {
     console.log('Home component: loading posts due to dependency change...');
     loadPosts();
-  }, [loadPosts]);
+
+    // Loại bỏ real-time listener của Firebase
+    return () => {};
+  }, [loadPosts, filters, searchTerm]);
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);

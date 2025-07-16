@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -13,8 +15,32 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   
-  const { login } = useAuth();
   const navigate = useNavigate();
+
+  const handleLogin = async (email, password) => {
+    try {
+      // Simulate API call for login
+      const response = await axios.get(`${API_BASE_URL}/users`, {
+        params: {
+          email: email,
+          password: password // In a real app, passwords should be hashed and compared server-side
+        }
+      });
+
+      if (response.data.length > 0) {
+        const user = response.data[0];
+        console.log('Login successful:', user);
+        // Store user info in localStorage or context for session management
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        return user;
+      } else {
+        throw new Error('Invalid credentials');
+      }
+    } catch (error) {
+      console.error('Login Error:', error);
+      throw error;
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -56,7 +82,7 @@ function Login() {
     try {
       setError('');
       setLoading(true);
-      await login(formData.email, formData.password);
+      await handleLogin(formData.email, formData.password);
       
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -68,20 +94,15 @@ function Login() {
       
       let errorMessage = 'Đăng nhập thất bại';
       
-      if (err.code === 'auth/user-not-found') {
-        errorMessage = 'Email chưa được đăng ký';
-      } else if (err.code === 'auth/wrong-password') {
-        errorMessage = 'Mật khẩu không đúng';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Email không hợp lệ';
-      } else if (err.code === 'auth/user-disabled') {
-        errorMessage = 'Tài khoản đã bị vô hiệu hóa';
-      } else if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'Quá nhiều lần thử. Vui lòng thử lại sau';
-      } else if (err.code === 'auth/network-request-failed') {
-        errorMessage = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet';
+      if (err.response && err.response.status === 401) {
+        errorMessage = 'Email hoặc mật khẩu không đúng';
+      } else if (err.message === 'Invalid credentials') {
+        errorMessage = 'Email hoặc mật khẩu không đúng';
+      } else if (err.response && err.response.status === 404) {
+        errorMessage = 'Tài khoản không tồn tại';
+      } else {
+        errorMessage = 'Đăng nhập thất bại. Vui lòng thử lại.';
       }
-      
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -252,4 +273,4 @@ function Login() {
   );
 }
 
-export default Login; 
+export default Login;

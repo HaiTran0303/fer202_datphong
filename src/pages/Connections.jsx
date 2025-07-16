@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // Removed useNavigate
-import { useAuth } from '../hooks/useAuth';
-import { connectionService } from '../utils/connectionService';
+import { Link } from 'react-router-dom';
 import { 
   MessageCircle, 
   UserPlus, 
@@ -21,17 +19,53 @@ import {
   Search
 } from 'lucide-react';
 
+// Mock functions to replace Firebase calls
+async function getSentConnections(userId) {
+  console.log('Mock: getSentConnections called for userId:', userId);
+  return [];
+}
+
+async function getReceivedConnections(userId) {
+  console.log('Mock: getReceivedConnections called for userId:', userId);
+  return [];
+}
+
+async function getActiveConversations(userId) {
+  console.log('Mock: getActiveConversations called for userId:', userId);
+  return [];
+}
+
+async function sendMessage(connectionId, fromUserId, toUserId, content) {
+  console.log('Mock: sendMessage called:', { connectionId, fromUserId, toUserId, content });
+  return { id: `mock-msg-${Date.now()}`, connectionId, fromUserId, toUserId, content, createdAt: new Date().toISOString() };
+}
+
+async function acceptConnection(connectionId) {
+  console.log('Mock: acceptConnection called for connectionId:', connectionId);
+  return { success: true };
+}
+
+async function declineConnection(connectionId) {
+  console.log('Mock: declineConnection called for connectionId:', connectionId);
+  return { success: true };
+}
+
+async function getMessagesByConnectionId(connectionId) {
+  console.log('Mock: getMessagesByConnectionId called for connectionId:', connectionId);
+  return [];
+}
+
 function Connections() {
-  const { currentUser } = useAuth();
-  // Removed useNavigate as it's not directly used for navigation in this component
-  const [activeTab, setActiveTab] = useState('messages');
-  // Re-added 'messages' state to display active conversations in the "Tin nhắn" tab
+  // currentUser sẽ cần được cung cấp thông qua một cơ chế khác
+  // Tạm thời để trống hoặc gán giá trị mặc định để tránh lỗi
+  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
+  const [activeTab, setActiveTab] = useState('messages'); 
   const [messages, setMessages] = useState([]); 
   const [sentInvitations, setSentInvitations] = useState([]);
   const [receivedInvitations, setReceivedInvitations] = useState([]);
-  const [matches, setMatches] = useState([]); // Still mocked for now
+  const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] }); // Initialize with conversation as an array
+  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] });
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -39,9 +73,18 @@ function Connections() {
 
   useEffect(() => {
     fetchConnections();
-  }, [currentUser]);
 
-  // Removed debugging useEffect for selectedConversation
+    // Setup real-time listener for connections/invitations (Mock - no-op)
+    // Removed Firebase specific real-time listeners and data fetching
+    // The data will be fetched once on component mount via fetchConnections
+    return () => {}; // Return a no-op cleanup function
+  }, [currentUser]); // Only re-run if currentUser changes
+
+  useEffect(() => {
+    // Removed Firebase specific real-time listeners for messages
+    // Messages will be fetched once on conversation selection
+    return () => {}; // Return a no-op cleanup function
+  }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
 
   const fetchConnections = async () => {
     if (!currentUser) {
@@ -52,9 +95,9 @@ function Connections() {
     console.log('Connections: Fetching connections for user ID:', currentUser.uid);
     try {
       const [sentConnections, receivedConnections, activeConversations] = await Promise.all([
-        connectionService.getSentConnections(currentUser.uid),
-        connectionService.getReceivedConnections(currentUser.uid),
-        connectionService.getActiveConversations(currentUser.uid) // Fetch active conversations
+        getSentConnections(currentUser.uid),
+        getReceivedConnections(currentUser.uid),
+        getActiveConversations(currentUser.uid)
       ]);
 
       console.log('Connections: Raw fetched sent connections:', sentConnections);
@@ -83,14 +126,13 @@ function Connections() {
         status: conn.status
       }));
 
-      // Map active conversations to messages state format
       const mappedMessages = activeConversations.map(conv => ({
         id: conv.id,
-        otherUser: conv.otherUser, // This should now be populated by getActiveConversations
+        otherUser: conv.otherUser,
         postTitle: conv.post?.title || 'Bài đăng',
-        lastMessage: conv.message, // Use the connection message as last message for now
+        lastMessage: conv.message,
         lastMessageTime: conv.updatedAt?.toDate ? conv.updatedAt.toDate().toISOString() : new Date().toISOString(),
-        unread: false // Placeholder, actual unread count would need more logic
+        unread: false
       }));
 
       console.log('Connections: Transformed sent invitations:', sent);
@@ -100,7 +142,7 @@ function Connections() {
 
       setSentInvitations(sent);
       setReceivedInvitations(received);
-      setMessages(mappedMessages); // Set messages state
+      setMessages(mappedMessages);
       setMatches([]);
     } catch (error) {
       console.error('Connections: Error fetching connections:', error);
@@ -110,7 +152,7 @@ function Connections() {
     }
   };
 
-  const handleSendMessage = async () => { // Made async
+  const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
@@ -118,38 +160,7 @@ function Connections() {
       const toUserId = selectedConversation.otherUser.uid;
       const connectionId = selectedConversation.id;
 
-      await connectionService.sendMessage(connectionId, fromUserId, toUserId, newMessage);
-
-      // Optimistically update UI
-      setSelectedConversation(prev => {
-        console.log('handleSendMessage: prev state for setSelectedConversation:', prev);
-        console.log('handleSendMessage: prev.conversation (before check):', prev?.conversation);
-
-        // Ensure prev is an object before accessing its properties
-        if (!prev) {
-          console.error('handleSendMessage: prev is null or undefined. Cannot update selectedConversation.');
-          // If prev is null, return a new initial state to prevent further errors
-          return { conversation: [] }; 
-        }
-        const currentConversation = Array.isArray(prev.conversation) ? prev.conversation : [];
-        
-        console.log('handleSendMessage: currentConversation (after check):', currentConversation);
-
-        return {
-          ...prev,
-          conversation: [
-            ...currentConversation,
-            {
-              id: Date.now(), // Temporary ID for optimistic update
-              sender: "currentUser",
-              content: newMessage,
-              timestamp: new Date().toISOString()
-            }
-          ],
-          lastMessage: newMessage,
-          lastMessageTime: new Date().toISOString()
-        };
-      });
+      await sendMessage(connectionId, fromUserId, toUserId, newMessage);
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -160,22 +171,19 @@ function Connections() {
   const handleInvitationResponse = async (invitationId, response) => {
     try {
       if (response === 'accept') {
-        await connectionService.acceptConnection(invitationId);
+        await acceptConnection(invitationId);
         const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
         if (acceptedInvitation) {
           console.log('Connections: Accepted Invitation:', acceptedInvitation);
           console.log('Connections: acceptedInvitation.fromUser:', acceptedInvitation.fromUser);
           console.log('Connections: acceptedInvitation.toUser:', acceptedInvitation.toUser);
 
-          // Fallback for otherUser if fromUser/toUser are undefined
           let otherUser;
           if (acceptedInvitation.fromUser && acceptedInvitation.fromUser.uid) {
             otherUser = (acceptedInvitation.fromUser.uid === currentUser.uid)
               ? acceptedInvitation.toUser
               : acceptedInvitation.fromUser;
           } else {
-            // Fallback: Create a dummy otherUser object
-            // This happens if fromUser/toUser are not populated by connectionService
             const targetUserId = acceptedInvitation.fromUserId === currentUser.uid
               ? acceptedInvitation.toUserId
               : acceptedInvitation.fromUserId;
@@ -183,7 +191,7 @@ function Connections() {
             otherUser = {
               uid: targetUserId,
               name: "Người dùng không xác định",
-              avatar: "https://via.placeholder.com/48", // Placeholder for avatar
+              avatar: "https://via.placeholder.com/48",
             };
             console.warn('Connections: Using fallback otherUser due to undefined fromUser/toUser in acceptedInvitation:', acceptedInvitation);
           }
@@ -195,10 +203,9 @@ function Connections() {
           }
           console.log('Connections: Determined otherUser:', otherUser);
           
-          const conversationMessages = await connectionService.getMessagesByConnectionId(invitationId);
+          const conversationMessages = await getMessagesByConnectionId(invitationId);
           console.log('Connections: Fetched conversation messages (raw):', conversationMessages);
 
-          // Ensure conversationMessages is an array before mapping
           const mappedConversation = Array.isArray(conversationMessages)
             ? conversationMessages.map(msg => ({
                 id: msg.id,
@@ -206,7 +213,7 @@ function Connections() {
                 content: msg.content,
                 timestamp: msg.createdAt?.toDate ? msg.createdAt.toDate().toISOString() : new Date().toISOString()
               }))
-            : []; // Default to empty array if not an array
+            : [];
           
           console.log('Connections: Mapped conversation (before setting state):', mappedConversation);
 
@@ -214,7 +221,7 @@ function Connections() {
             id: acceptedInvitation.id, 
             otherUser: otherUser,
             postTitle: acceptedInvitation.postTitle,
-            conversation: Array.isArray(mappedConversation) ? mappedConversation : [], // Explicitly ensure it's an array
+            conversation: Array.isArray(mappedConversation) ? mappedConversation : [],
             lastMessage: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].content : '',
             lastMessageTime: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].timestamp : new Date().toISOString()
           };
@@ -225,7 +232,7 @@ function Connections() {
           setActiveTab('messages');
         }
       } else {
-        await connectionService.declineConnection(invitationId);
+        await declineConnection(invitationId);
       }
 
       const updatedInvitations = [...sentInvitations, ...receivedInvitations].map(inv => {
@@ -260,8 +267,7 @@ function Connections() {
   const getUnreadCount = (type) => {
     switch (type) {
       case 'messages':
-        // Assuming messages state now holds all active conversations, count unread if applicable
-        return messages.filter(msg => msg.unread).length; // Re-enable unread count if applicable
+        return messages.filter(msg => msg.unread).length;
       case 'invitations':
         return [...sentInvitations, ...receivedInvitations].filter(inv => inv.status === 'pending').length;
       case 'matches':
@@ -361,7 +367,7 @@ function Connections() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Tìm kiếm theo tên hoặc bài đăng..."
+              placeholder="Nhập tìm kiếm..."
             />
           </div>
         </div>
@@ -627,19 +633,19 @@ function Connections() {
         </div>
       </div>
       {/* Conversation Modal */}
-      {selectedConversation && (
+      {selectedConversation && selectedConversation.otherUser && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b">
               <div className="flex items-center space-x-3">
                 <img
-                  src={selectedConversation.otherUser.avatar}
-                  alt={selectedConversation.otherUser.name}
+                  src={selectedConversation.otherUser.avatar || 'https://via.placeholder.com/48'}
+                  alt={selectedConversation.otherUser.name || 'Người dùng'}
                   className="w-10 h-10 rounded-full"
                 />
                 <div>
                   <h3 className="font-semibold">
-                    {selectedConversation.otherUser.name}
+                    {selectedConversation.otherUser.name || 'Người dùng'}
                   </h3>
                   <p className="text-sm text-gray-600">
                     {selectedConversation.postTitle}
@@ -687,10 +693,10 @@ function Connections() {
                   onChange={(e) => setNewMessage(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Nhập tin nhắn..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()} // Removed conversationId param
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 />
                 <button
-                  onClick={() => handleSendMessage()} // Removed conversationId param
+                  onClick={() => handleSendMessage()}
                   className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
                 >
                   <Send size={20} />

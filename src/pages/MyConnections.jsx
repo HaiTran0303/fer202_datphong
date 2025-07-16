@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { connectionService } from '../utils/connectionService';
 import { 
   UserPlus, 
   Check, 
@@ -15,14 +13,92 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// Mock data storage for connections
+let mockConnections = [];
+
+// Helper functions (copied from Connections.jsx)
+
+// Lấy danh sách lời mời đã gửi
+async function getSentConnections(userId) {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
+  return mockConnections.filter(conn => conn.fromUserId === userId);
+}
+
+// Lấy danh sách lời mời đã nhận
+async function getReceivedConnections(userId) {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
+  return mockConnections.filter(conn => conn.toUserId === userId);
+}
+
+// Chấp nhận lời mời kết nối
+async function acceptConnection(connectionId) {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
+  const connectionIndex = mockConnections.findIndex(conn => conn.id === connectionId);
+  if (connectionIndex > -1) {
+    mockConnections[connectionIndex].status = 'accepted';
+    mockConnections[connectionIndex].updatedAt = new Date().toISOString();
+    return { success: true };
+  }
+  throw new Error('Connection not found');
+}
+
+// Từ chối lời mời kết nối
+async function declineConnection(connectionId) {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
+  const connectionIndex = mockConnections.findIndex(conn => conn.id === connectionId);
+  if (connectionIndex > -1) {
+    mockConnections[connectionIndex].status = 'declined';
+    mockConnections[connectionIndex].updatedAt = new Date().toISOString();
+    return { success: true };
+  }
+  throw new Error('Connection not found');
+}
+
+// Hủy lời mời kết nối
+async function cancelConnection(connectionId) {
+  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
+  const initialLength = mockConnections.length;
+  mockConnections = mockConnections.filter(conn => conn.id !== connectionId);
+  if (mockConnections.length < initialLength) {
+    return { success: true };
+  }
+  throw new Error('Connection not found');
+}
+
 function MyConnections() {
-  const { currentUser } = useAuth();
+  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
   const [activeTab, setActiveTab] = useState('received');
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    // Add some mock connections for demonstration
+    if (mockConnections.length === 0) {
+      mockConnections.push({
+        id: 'conn1',
+        fromUserId: 'other-user-456',
+        toUserId: currentUser.uid,
+        postId: 'mock1',
+        message: 'Chào bạn, tôi thấy bài đăng của bạn rất phù hợp với tôi. Chúng ta có thể trò chuyện thêm không?',
+        status: 'pending',
+        createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+        fromUser: { uid: 'other-user-456', fullName: 'Nguyễn Văn A', avatar: 'https://via.placeholder.com/48' },
+        post: { id: 'mock1', title: 'Tìm bạn nữ ghép trọ quận 1' }
+      });
+      mockConnections.push({
+        id: 'conn2',
+        fromUserId: currentUser.uid,
+        toUserId: 'another-user-789',
+        postId: 'mock2',
+        message: 'Mình quan tâm đến phòng trọ ở Gò Vấp. Bạn có thể cho mình thêm thông tin không?',
+        status: 'pending',
+        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+        toUser: { uid: 'another-user-789', fullName: 'Trần Thị B', avatar: 'https://via.placeholder.com/48' },
+        post: { id: 'mock2', title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa' }
+      });
+    }
+
     if (currentUser) {
       fetchConnections();
     }
@@ -35,9 +111,9 @@ function MyConnections() {
     try {
       let data = [];
       if (activeTab === 'received') {
-        data = await connectionService.getReceivedConnections(currentUser.uid);
+        data = await getReceivedConnections(currentUser.uid);
       } else {
-        data = await connectionService.getSentConnections(currentUser.uid);
+        data = await getSentConnections(currentUser.uid);
       }
       setConnections(data);
     } catch (error) {
@@ -50,9 +126,9 @@ function MyConnections() {
   const handleConnectionResponse = async (connectionId, response) => {
     try {
       if (response === 'accept') {
-        await connectionService.acceptConnection(connectionId);
+        await acceptConnection(connectionId);
       } else {
-        await connectionService.declineConnection(connectionId);
+        await declineConnection(connectionId);
       }
 
       // Refresh connections
@@ -65,7 +141,7 @@ function MyConnections() {
 
   const handleCancelConnection = async (connectionId) => {
     try {
-      await connectionService.cancelConnection(connectionId);
+      await cancelConnection(connectionId);
       fetchConnections();
     } catch (error) {
       console.error('Error cancelling connection:', error);
@@ -297,4 +373,4 @@ function MyConnections() {
   );
 }
 
-export default MyConnections; 
+export default MyConnections;

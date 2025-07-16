@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { X, Send, User, MessageCircle, Heart } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { connectionService } from '../utils/connectionService';
-
 function ConnectionModal({ isOpen, onClose, post, targetUser }) {
-  const { currentUser } = useAuth();
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,26 +13,21 @@ function ConnectionModal({ isOpen, onClose, post, targetUser }) {
       return;
     }
 
-    if (!currentUser) {
-      setError('Vui lòng đăng nhập để gửi lời mời');
-      return;
-    }
-
+    // Simulate sending connection request
     setIsLoading(true);
     setError('');
 
     try {
-      if (!targetUser.uid) {
-        setError('Không tìm thấy user nhận kết nối!');
-        setIsLoading(false);
-        return;
-      }
-      await connectionService.sendConnectionRequest(
-        currentUser.uid,
-        targetUser.uid, // uid này luôn là authorId
-        post.id,
-        message.trim()
-      );
+      // In a real application, you would send this data to your backend
+      console.log('Simulating sending connection request:', {
+        fromUser: 'current_user_id', // Replace with actual current user ID
+        toUser: targetUser?.uid,
+        postId: post.id,
+        message: message.trim(),
+      });
+
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Reset form
       setMessage('');
@@ -198,4 +189,4 @@ function ConnectionModal({ isOpen, onClose, post, targetUser }) {
   );
 }
 
-export default ConnectionModal; 
+export default ConnectionModal;

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Bell, Lock, User, Globe, Mail } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 const Settings = () => {
-  const { currentUser } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null); // Will load from localStorage
   const [settings, setSettings] = useState({
     notifications: {
       email: true,
@@ -18,6 +20,38 @@ const Settings = () => {
     language: 'vi',
     theme: 'light'
   });
+
+  useEffect(() => {
+    // Load current user from localStorage (e.g., after login)
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+
+    // Load settings from db.json for the current user
+    const fetchSettings = async () => {
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        try {
+          const response = await axios.get(`${API_BASE_URL}/settings/${user.id}`);
+          setSettings(response.data);
+        } catch (error) {
+          console.error('Error loading settings:', error);
+          // If no settings found, use default and create
+          const defaultSettings = {
+            id: user.id,
+            notifications: { email: true, push: true, sms: false },
+            privacy: { showPhone: false, showEmail: false, profileVisible: true },
+            language: 'vi',
+            theme: 'light'
+          };
+          await axios.post(`${API_BASE_URL}/settings`, defaultSettings);
+          setSettings(defaultSettings);
+        }
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleNotificationChange = (type, value) => {
     setSettings(prev => ({
@@ -39,10 +73,19 @@ const Settings = () => {
     }));
   };
 
-  const handleSave = () => {
-    // In a real app, save to Firebase
-    console.log('Settings saved:', settings);
-    alert('Cài đặt đã được lưu!');
+  const handleSave = async () => {
+    if (!currentUser) {
+      alert('Vui lòng đăng nhập để lưu cài đặt.');
+      return;
+    }
+    try {
+      // Save settings to db.json
+      await axios.put(`${API_BASE_URL}/settings/${currentUser.id}`, settings);
+      alert('Cài đặt đã được lưu!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      alert('Lỗi khi lưu cài đặt. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -255,4 +298,4 @@ const Settings = () => {
   );
 };
 
-export default Settings; 
+export default Settings;

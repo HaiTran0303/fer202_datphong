@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { postsService } from '../utils/firebase';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 const EditPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,18 +24,17 @@ const EditPost = () => {
   });
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
     const fetchPost = async () => {
       try {
-        const fetchedPost = await postsService.getPostById(id);
-        if (fetchedPost.authorId !== currentUser.uid) {
-          setError('Bạn không có quyền chỉnh sửa bài đăng này.');
-          setLoading(false);
-          return;
-        }
+        const response = await axios.get(`${API_BASE_URL}/posts/${id}`);
+        const fetchedPost = response.data;
+        // Assuming a fixed user for now as Firebase auth is removed
+        // You'll need to implement your own authentication system if needed
+        // if (fetchedPost.authorId !== user.uid) {
+        //   setError('Bạn không có quyền chỉnh sửa bài đăng này.');
+        //   setLoading(false);
+        //   return;
+        // }
         setPost(fetchedPost);
         setFormData({
           title: fetchedPost.title || '',
@@ -57,7 +56,7 @@ const EditPost = () => {
       }
     };
     fetchPost();
-  }, [id, currentUser, navigate]);
+  }, [id, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -68,7 +67,10 @@ const EditPost = () => {
     e.preventDefault();
     try {
       setLoading(true);
-      await postsService.updatePost(id, formData);
+      await axios.put(`${API_BASE_URL}/posts/${id}`, {
+        ...formData,
+        updatedAt: new Date().toISOString(), // Add updatedAt timestamp
+      });
       alert('Cập nhật tin đăng thành công!');
       navigate('/my-posts');
     } catch (err) {

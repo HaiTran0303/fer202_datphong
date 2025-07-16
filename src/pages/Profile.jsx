@@ -1,12 +1,27 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { postsService } from '../utils/firebase';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, School, MapPin, Edit, Save, X, Camera, Star, Heart, Home, CheckCircle, Upload, AlertCircle } from 'lucide-react';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:3001';
 
 function Profile() {
-  const { currentUser, updateUserProfile } = useAuth();
+  const navigate = useNavigate();
+  // We'll assume a user is "logged in" for now, as Firebase auth was removed.
+  // In a real scenario, this would come from a global state or context.
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    // Simulate getting current user from local storage or context
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    } else {
+      // If no user is logged in, redirect to login page
+      navigate('/login');
+    }
+  }, [navigate]);
+
   const [activeTab, setActiveTab] = useState('info');
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,50 +59,40 @@ function Profile() {
   }, [currentUser]);
 
   const loadUserProfile = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      if (!currentUser || !db) {
-        // Set basic info if Firebase not available
-        setProfileData(prev => ({
-          ...prev,
-          fullName: currentUser?.displayName || '',
-          email: currentUser?.email || '',
-        }));
-        return;
-      }
-      
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        setProfileData(prev => ({
-          ...prev,
-          ...userData,
-          fullName: userData.fullName || currentUser.displayName || '',
-          email: userData.email || currentUser.email || '',
-        }));
-        
-        // Load basic user stats from profile
+      const response = await axios.get(`${API_BASE_URL}/users?email=${currentUser.email}`);
+      if (response.data.length > 0) {
+        const userData = response.data[0];
+        setProfileData({
+          fullName: userData.fullName || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          school: userData.school || '',
+          major: userData.major || '',
+          year: userData.year || '',
+          gender: userData.gender || '',
+          city: userData.city || '',
+          bio: userData.bio || '',
+          interests: userData.interests || [],
+          lookingFor: userData.lookingFor || {
+            gender: '',
+            ageRange: '',
+            budget: '',
+            location: '',
+            lifestyle: []
+          }
+        });
+        // Initial stats load based on profile data if available
         setUserStats(prev => ({
           ...prev,
           connectionsCount: userData.connectionsCount || 0,
-          rating: userData.rating || 4.5, // Default demo rating
-          profileViews: userData.profileViews || Math.floor(Math.random() * 50) + 10, // Demo views
-          joinDate: userData.createdAt || currentUser.metadata?.creationTime || ''
+          rating: userData.rating || 4.5,
+          profileViews: userData.profileViews || 0,
+          joinDate: userData.createdAt || ''
         }));
       } else {
-        // Initialize with basic info if no profile exists
-        setProfileData(prev => ({
-          ...prev,
-          fullName: currentUser.displayName || '',
-          email: currentUser.email || '',
-        }));
-        setUserStats(prev => ({
-          ...prev,
-          rating: 4.5, // Default demo rating
-          profileViews: Math.floor(Math.random() * 50) + 10, // Demo views
-          joinDate: currentUser.metadata?.creationTime || ''
-        }));
+        setMessage({ type: 'error', text: 'Không tìm thấy thông tin hồ sơ người dùng.' });
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
@@ -98,57 +103,22 @@ function Profile() {
   };
 
   const loadUserStats = async () => {
+    if (!currentUser) return;
     try {
-      if (!currentUser) {
-        console.log('No current user, skipping stats load');
-        return;
-      }
-      
-      console.log('Loading stats for user:', currentUser.uid, currentUser.email);
-      
-      // Get user's posts count from Firebase
-      const userPosts = await postsService.getPostsByUser(currentUser.uid);
-      console.log('User posts found:', userPosts.length, userPosts);
-      
-      // Calculate demo connections and rating based on posts
-      const demoConnections = Math.max(userPosts.length * 2, 5) + Math.floor(Math.random() * 5);
-      const demoRating = userPosts.length > 0 ? 4.2 + (Math.random() * 0.6) : 4.5;
-      
-      // Update stats with real and demo data
+      const postsResponse = await axios.get(`${API_BASE_URL}/posts?authorId=${currentUser.id}`);
+      const userPosts = postsResponse.data;
+
       setUserStats(prev => ({
         ...prev,
         postsCount: userPosts.length,
-        connectionsCount: demoConnections,
-        rating: parseFloat(demoRating.toFixed(1)),
-        profileViews: prev.profileViews || Math.floor(Math.random() * 50) + 20
+        // For now, keep mock/default values if no real data is available
+        connectionsCount: prev.connectionsCount || 0, 
+        rating: prev.rating || 4.5,
+        profileViews: prev.profileViews || 0
       }));
-      
-      console.log('Stats updated:', {
-        postsCount: userPosts.length,
-        connectionsCount: demoConnections,
-        rating: parseFloat(demoRating.toFixed(1))
-      });
-      
     } catch (error) {
       console.error('Error loading user stats:', error);
-      // Set demo data if Firebase fails
-      const demoPosts = Math.floor(Math.random() * 3) + 1;
-      const demoConnections = Math.floor(Math.random() * 10) + 5;
-      const demoRating = 4.0 + (Math.random() * 1.0);
-      
-      setUserStats(prev => ({
-        ...prev,
-        postsCount: demoPosts,
-        connectionsCount: demoConnections,
-        rating: parseFloat(demoRating.toFixed(1)),
-        profileViews: prev.profileViews || Math.floor(Math.random() * 50) + 20
-      }));
-      
-      console.log('Used demo stats due to error:', {
-        postsCount: demoPosts,
-        connectionsCount: demoConnections,
-        rating: parseFloat(demoRating.toFixed(1))
-      });
+      setMessage({ type: 'error', text: 'Không thể tải số liệu thống kê người dùng' });
     }
   };
 
@@ -196,20 +166,17 @@ function Profile() {
     try {
       setLoading(true);
       
-      if (currentUser && db) {
-        // Save to Firestore
-        await setDoc(doc(db, 'users', currentUser.uid), {
-          ...profileData,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-        
-        // Update Firebase Auth profile
-        await updateUserProfile(profileData.fullName, null);
-      }
+      // Simulate saving to a backend or local storage
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // In a real application, you would send profileData to your API
+      console.log('Saving profile data:', profileData);
       
       setIsEditing(false);
+      setMessage({ type: 'success', text: 'Cập nhật hồ sơ thành công!' });
     } catch (error) {
       console.error('Failed to update profile:', error);
+      setMessage({ type: 'error', text: 'Cập nhật hồ sơ thất bại. Vui lòng thử lại.' });
     } finally {
       setLoading(false);
     }
@@ -360,6 +327,19 @@ function Profile() {
                       value={profileData.fullName}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={profileData.email}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled
                     />
                   </div>
                   <div>
@@ -659,4 +639,4 @@ function Profile() {
   );
 }
 
-export default Profile; 
+export default Profile;

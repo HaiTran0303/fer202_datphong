@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { postsService } from '../utils/firebase';
+import axios from 'axios';
 import { LOCATIONS, DISTRICTS } from '../utils/constants';
-import { 
-  User, 
-  MapPin, 
-  DollarSign, 
-  School, 
-  Users, 
+import {
+  User,
+  MapPin,
+  DollarSign,
+  School,
+  Users,
   Calendar,
   Heart,
   Home,
@@ -17,11 +16,12 @@ import {
   Phone
 } from 'lucide-react';
 
+const API_BASE_URL = 'http://localhost:3001';
+
 const CreatePost = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
   const { postId } = useParams();
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -39,96 +39,46 @@ const CreatePost = () => {
     contactPhone: '',
     interests: [],
     lifestyle: [],
-    images: []
+    images: [] // json-server will store image URLs, not actual files
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Check authentication
+  const [isLoading, setIsLoading] = useState(false); // Keep for general loading, not image specific
+
+  // Load post data if editing
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-    }
-    // If editing, load post data
-    if (postId) {
-      (async () => {
+    const fetchPost = async () => {
+      if (postId) {
         setLoading(true);
         try {
-          const post = await postsService.getPostById(postId);
-          if (post && post.authorId === currentUser.uid) {
-            setFormData({ ...post });
+          const response = await axios.get(`${API_BASE_URL}/posts/${postId}`);
+          const post = response.data;
+          // Assuming a fixed user for now as Firebase auth is removed
+          // You'll need to implement your own authentication system if needed
+          if (post) { // && post.authorId === 'some_user_id'
+            setFormData(post);
           } else {
-            alert('Bạn không có quyền chỉnh sửa bài đăng này.');
+            alert('Bài đăng không tồn tại hoặc bạn không có quyền chỉnh sửa.');
             navigate('/my-posts');
           }
-        } catch {
+        } catch (err) {
           alert('Không thể tải bài đăng để chỉnh sửa.');
           navigate('/my-posts');
+          console.error('Error fetching post:', err);
         } finally {
           setLoading(false);
         }
-      })();
-    }
-  }, [currentUser, navigate, postId]);
+      }
+    };
+    fetchPost();
+  }, [navigate, postId]);
 
-  // Test function to debug
-  const testPost = async () => {
-    console.log('Testing post creation...');
-    console.log('Current user:', currentUser);
-    
-    if (!currentUser) {
-      alert('Vui lòng đăng nhập trước khi đăng tin');
-      navigate('/login');
-      return;
-    }
-    
-    try {
-      const testData = {
-        title: 'Test Post - Tìm bạn ghép trọ',
-        description: 'Đây là bài test để kiểm tra chức năng đăng tin',
-        budget: 3000000,
-        location: 'Test Location',
-        district: 'Quận 1',
-        city: 'Hồ Chí Minh',
-        roomType: 'double',
-        genderPreference: 'female',
-        myGender: 'female',
-        school: 'Đại học FPT',
-        major: 'Công nghệ thông tin',
-        year: '2',
-        availableFrom: '2024-02-01',
-        contactName: 'Test User',
-        contactPhone: '0123456789',
-        interests: ['Đọc sách', 'Nghe nhạc'],
-        lifestyle: ['Sạch sẽ', 'Yên tĩnh'],
-        images: [],
-        type: 'roommate-search',
-        authorId: currentUser.uid,
-        authorName: 'Test User',
-        authorPhone: '0123456789',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active'
-      };
-      
-      console.log('Creating test post with data:', testData);
-      const result = await postsService.createPost(testData);
-      console.log('Test post created successfully:', result);
-      alert('Test post created successfully!');
-      
-      // Refresh page to show new post
-      window.location.href = '/';
-      
-    } catch (error) {
-      console.error('Error creating test post:', error);
-      alert('Error creating test post: ' + error.message);
-    }
-  };
-
-  if (!currentUser) {
-    return null;
-  }
+  // Remove currentUser check for now, as Firebase auth is removed
+  // You'll need to implement your own authentication system if needed
+  // if (!currentUser) {
+  //   return null;
+  // }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -147,14 +97,26 @@ const CreatePost = () => {
     }));
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
+    // For json-server, we'll just store the file names or mock URLs
+    // Real image upload would require a separate backend service
     const files = Array.from(e.target.files);
-    // In a real app, you would upload these to Firebase Storage
-    // For now, we'll just store the file names
-    setFormData(prev => ({
-      ...prev,
-      images: [...prev.images, ...files.map(file => file.name)]
-    }));
+    if (files.length === 0) return;
+
+    setIsLoading(true);
+    setError('');
+    try {
+      const newImageUrls = files.map(file => `/images/${file.name}`); // Mock URLs
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...newImageUrls]
+      }));
+    } catch (err) {
+      setError('Lỗi tải ảnh lên. (Không có backend xử lý ảnh)');
+      console.error('Error simulating image upload:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const removeImage = (index) => {
@@ -207,36 +169,32 @@ const CreatePost = () => {
     }
 
     try {
+      const postData = {
+        ...formData,
+        location: formData.location || '',
+        district: formData.district || '',
+        budget: parseInt(formData.budget),
+        // userId: currentUser ? currentUser.uid : 'anonymous', // Replace with actual user ID if auth implemented
+        // authorName: formData.contactName || (currentUser ? currentUser.displayName : 'Anonymous'),
+        // authorPhone: formData.contactPhone,
+        createdAt: formData.createdAt || new Date().toISOString(), // Preserve createdAt if editing
+        updatedAt: new Date().toISOString(),
+        status: formData.status || 'active',
+        views: formData.views || 0,
+        likes: formData.likes || 0,
+      };
+
       if (postId) {
-        // Update post
-        await postsService.updatePost(postId, {
-          ...formData,
-          location: formData.location || '',
-          district: formData.district || '',
-          updatedAt: new Date().toISOString(),
-        });
+        await axios.put(`${API_BASE_URL}/posts/${postId}`, postData);
         alert('Cập nhật bài đăng thành công!');
       } else {
-        // Create new post
-        const postData = {
-          ...formData,
-          location: formData.location || '',
-          district: formData.district || '',
-          type: 'roommate-search',
-          budget: parseInt(formData.budget),
-          authorId: currentUser.uid,
-          authorName: formData.contactName || currentUser.displayName,
-          authorPhone: formData.contactPhone,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: 'active'
-        };
-        await postsService.createPost(postData);
+        await axios.post(`${API_BASE_URL}/posts`, postData);
         alert('Đăng bài thành công!');
       }
       navigate('/my-posts');
-    } catch {
+    } catch(err) {
       setError('Có lỗi xảy ra khi lưu bài đăng.');
+      console.error('Error saving post:', err);
     } finally {
       setLoading(false);
     }
@@ -652,15 +610,8 @@ const CreatePost = () => {
                 Hủy bỏ
               </button>
               <button
-                type="button"
-                onClick={testPost}
-                className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
-              >
-                Test Đăng tin
-              </button>
-              <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || isLoading}
                 className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
               >
                 {loading ? (
@@ -683,4 +634,4 @@ const CreatePost = () => {
   );
 };
 
-export default CreatePost; 
+export default CreatePost;

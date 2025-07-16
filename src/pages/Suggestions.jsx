@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { postsService } from '../utils/firebase';
 import SearchFilter from '../components/SearchFilter';
 import { 
   Brain, 
@@ -21,7 +19,6 @@ import {
 } from 'lucide-react';
 
 function Suggestions() {
-  const { currentUser } = useAuth();
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,14 +45,70 @@ function Suggestions() {
     setLoading(true);
     
     try {
-      // Get posts from Firebase with filters
-      const searchFilters = {
-        search: searchTerm,
-        ...filters
-      };
-      
-      const result = await postsService.getPosts(searchFilters);
-      const allPosts = result.posts || [];
+      // Simulate fetching posts from a mock API or local data
+      const mockPosts = [
+        {
+          id: '1',
+          title: 'Phòng trọ cao cấp Quận 1',
+          location: 'Quận 1',
+          price: 4000000,
+          genderPreference: 'female',
+          category: 'double',
+          amenities: ['Wifi', 'Điều hòa', 'Máy giặt', 'Bếp', 'An ninh'],
+          createdAt: new Date().toISOString(),
+          images: [],
+          hasVideo: false,
+        },
+        {
+          id: '2',
+          title: 'Phòng trọ giá rẻ Gò Vấp',
+          location: 'Gò Vấp',
+          price: 2500000,
+          genderPreference: 'male',
+          category: 'single',
+          amenities: ['Wifi', 'Quạt'],
+          createdAt: new Date().toISOString(),
+          images: [],
+          hasVideo: false,
+        },
+        {
+          id: '3',
+          title: 'Căn hộ mini Bình Thạnh',
+          location: 'Bình Thạnh',
+          price: 3800000,
+          genderPreference: 'female',
+          category: 'mini_apartment',
+          amenities: ['Wifi', 'Điều hòa', 'Nóng lạnh', 'Bếp'],
+          createdAt: new Date().toISOString(),
+          images: [],
+          hasVideo: true,
+        },
+        {
+          id: '4',
+          title: 'Ở ghép Quận 3',
+          location: 'Quận 3',
+          price: 1500000,
+          genderPreference: 'any',
+          category: 'shared',
+          amenities: ['Wifi'],
+          createdAt: new Date().toISOString(),
+          images: [],
+          hasVideo: false,
+        },
+      ];
+
+      // Apply search and filters to mock data
+      let filteredPosts = mockPosts.filter(post => {
+        const matchesSearch = searchTerm ? post.title.toLowerCase().includes(searchTerm.toLowerCase()) : true;
+        const matchesCategory = filters.category ? post.category === filters.category : true;
+        const matchesMinPrice = filters.minPrice ? post.price >= filters.minPrice : true;
+        const matchesMaxPrice = filters.maxPrice ? post.price <= filters.maxPrice : true;
+        const matchesLocation = filters.location ? post.location === filters.location : true;
+        const matchesGender = filters.genderPreference ? post.genderPreference === filters.genderPreference : true;
+        return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice && matchesLocation && matchesGender;
+      });
+
+      const allPosts = filteredPosts;
       
       // Calculate match scores based on user preferences
       const postsWithScores = allPosts.map(post => {
@@ -115,7 +168,7 @@ function Suggestions() {
     setRefreshing(true);
     
     try {
-      // Re-fetch suggestions from Firebase
+      // Re-fetch suggestions from mock data
       await fetchSuggestions();
     } catch (error) {
       console.error('Error refreshing suggestions:', error);
@@ -174,23 +227,25 @@ function Suggestions() {
     return true;
   });
 
-  if (!currentUser) {
-    return (
-      <div className="text-center py-12">
-        <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Gợi ý AI</h2>
-        <p className="text-gray-600 mb-6">
-          Đăng nhập để nhận được gợi ý bạn ghép trọ phù hợp nhất
-        </p>
-        <Link 
-          to="/login" 
-          className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700"
-        >
-          Đăng nhập ngay
-        </Link>
-      </div>
-    );
-  }
+  // Since currentUser and login are Firebase-related, we'll remove this block
+  // and assume the user is always "logged in" for the purpose of suggestions.
+  // if (!currentUser) {
+  //   return (
+  //     <div className="text-center py-12">
+  //       <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+  //       <h2 className="text-2xl font-bold text-gray-900 mb-2">Gợi ý AI</h2>
+  //       <p className="text-gray-600 mb-6">
+  //         Đăng nhập để nhận được gợi ý bạn ghép trọ phù hợp nhất
+  //       </p>
+  //       <Link 
+  //         to="/login" 
+  //         className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700"
+  //       >
+  //         Đăng nhập ngay
+  //       </Link>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
@@ -427,4 +482,4 @@ function Suggestions() {
   );
 }
 
-export default Suggestions; 
+export default Suggestions;

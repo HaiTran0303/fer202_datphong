@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import ConnectionModal from './ConnectionModal';
 
 const PostCard = ({ post }) => {
-  const { currentUser } = useAuth();
+  const [currentUser, setCurrentUser] = useState(null); // Simulated currentUser
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
+
+  useEffect(() => {
+    // Load current user from localStorage (simulating auth)
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const formatPrice = (price) => {
     if (price >= 1000000) {
@@ -226,4 +233,4 @@ const PostCard = ({ post }) => {
   );
 };
 
-export default PostCard; 
+export default PostCard;
