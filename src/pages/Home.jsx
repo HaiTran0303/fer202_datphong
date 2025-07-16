@@ -127,9 +127,16 @@ const Home = () => {
   };
 
   const handleLocationFilter = (location) => {
-    const newFilters = location ? { ...filters, location } : { ...filters };
-    delete newFilters.location; // Remove location if empty
-    handleFilterChange(newFilters);
+    setFilters(prevFilters => {
+      const newFilters = { ...prevFilters };
+      if (location) {
+        newFilters.location = location;
+      } else {
+        delete newFilters.location;
+      }
+      return newFilters;
+    });
+    setCurrentPage(1);
   };
 
   if (error) {

@@ -15,8 +15,18 @@
         "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Wifi", "Giường", "Tủ quần áo", "Bàn học"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Máy lạnh",
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 1000000,
       "contact": {
         "name": "Anh Hiếu",
@@ -44,8 +54,18 @@
         "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Ban công", "Thang máy", "Wifi", "Giường"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Máy lạnh",
+        "Ban công",
+        "Thang máy",
+        "Wifi",
+        "Giường"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 2000000,
       "contact": {
         "name": "Chị Mai",
@@ -73,8 +93,19 @@
         "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Wifi", "Giường", "Tủ quần áo", "Bàn học", "Tủ lạnh"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Máy lạnh",
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học",
+        "Tủ lạnh"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 1500000,
       "contact": {
         "name": "Anh Tuấn",
@@ -103,8 +134,23 @@
         "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Wifi", "Giường", "Tủ quần áo", "Bàn học", "Tủ lạnh", "Máy giặt", "Bếp", "Sofa"],
-      "utilities": ["Điện", "Nước", "Internet", "Cáp TV"],
+      "amenities": [
+        "Máy lạnh",
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học",
+        "Tủ lạnh",
+        "Máy giặt",
+        "Bếp",
+        "Sofa"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet",
+        "Cáp TV"
+      ],
       "deposit": 5000000,
       "contact": {
         "name": "Chị Linh",
@@ -132,8 +178,20 @@
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Ban công", "Wifi", "Giường", "Tủ quần áo", "Bàn học", "Tủ lạnh"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Máy lạnh",
+        "Ban công",
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học",
+        "Tủ lạnh"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 3000000,
       "contact": {
         "name": "Anh Đức",
@@ -160,8 +218,17 @@
         "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Wifi", "Giường", "Tủ quần áo", "Bàn học"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 1500000,
       "contact": {
         "name": "Chị Hương",
@@ -190,8 +257,24 @@
         "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Máy lạnh", "Wifi", "Giường", "Tủ quần áo", "Bàn học", "Tủ lạnh", "Máy giặt", "Bếp", "Sofa", "Sân vườn"],
-      "utilities": ["Điện", "Nước", "Internet", "Cáp TV"],
+      "amenities": [
+        "Máy lạnh",
+        "Wifi",
+        "Giường",
+        "Tủ quần áo",
+        "Bàn học",
+        "Tủ lạnh",
+        "Máy giặt",
+        "Bếp",
+        "Sofa",
+        "Sân vườn"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet",
+        "Cáp TV"
+      ],
       "deposit": 10000000,
       "contact": {
         "name": "Anh Nam",
@@ -218,8 +301,17 @@
         "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
         "https://images.unsplash.com/photo-1571508601891-ca5e7a713859?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "amenities": ["Điện 3 pha", "Nước", "Internet", "Bãi đậu xe"],
-      "utilities": ["Điện", "Nước", "Internet"],
+      "amenities": [
+        "Điện 3 pha",
+        "Nước",
+        "Internet",
+        "Bãi đậu xe"
+      ],
+      "utilities": [
+        "Điện",
+        "Nước",
+        "Internet"
+      ],
       "deposit": 20000000,
       "contact": {
         "name": "Ông Hải",
@@ -233,6 +325,104 @@
       "views": 234,
       "likes": 11,
       "id": "8"
+    },
+    {
+      "id": "89dd",
+      "title": "tesst",
+      "description": "aaaaaaaaaaaaaa",
+      "budget": 390000000,
+      "location": "Hà Nội",
+      "district": "Sơn Tây",
+      "roomType": "double",
+      "genderPreference": "female",
+      "myGender": "male",
+      "school": "Đại học FPT",
+      "major": "Công nghệ thông tin",
+      "year": "3",
+      "availableFrom": "2025-07-16",
+      "contactName": "Trần Hoàng Hải",
+      "contactPhone": "0972773693",
+      "interests": [
+        "Xem phim",
+        "Thể thao"
+      ],
+      "lifestyle": [
+        "Dậy sớm",
+        "Thích tiệc tùng"
+      ],
+      "images": [],
+      "createdAt": "2025-07-16T03:42:33.654Z",
+      "updatedAt": "2025-07-16T03:42:33.654Z",
+      "status": "active",
+      "views": 0,
+      "likes": 0
+    },
+    {
+      "id": "1f6f",
+      "title": "a",
+      "description": "aaaaaaaaaaaaa",
+      "budget": 30000000000,
+      "location": "Hà Nội",
+      "district": "Bắc Từ Liêm",
+      "roomType": "double",
+      "genderPreference": "female",
+      "myGender": "male",
+      "school": "Đại học FPT",
+      "major": "Công nghệ thông tin",
+      "year": "4",
+      "availableFrom": "2025-07-16",
+      "contactName": "aaaaaaaaaaa",
+      "contactPhone": "aaaaaaaaaaaaaaaaaaaa",
+      "interests": [
+        "Xem phim",
+        "Nấu ăn"
+      ],
+      "lifestyle": [
+        "Yên tĩnh"
+      ],
+      "images": [
+        "/images/1.jpg"
+      ],
+      "createdAt": "2025-07-16T04:32:37.068Z",
+      "updatedAt": "2025-07-16T04:32:37.069Z",
+      "status": "active",
+      "views": 0,
+      "likes": 0
+    },
+    {
+      "id": "7f73",
+      "title": "aaa",
+      "description": "aaaaaaa",
+      "budget": 30000000,
+      "location": "Hà Nội",
+      "district": "Thạch Thất",
+      "roomType": "double",
+      "genderPreference": "male",
+      "myGender": "male",
+      "school": "Đại học FPT",
+      "major": "Công nghệ thông tin",
+      "year": "4",
+      "availableFrom": "2025-07-17",
+      "contactName": "Trần Hoàng Hải",
+      "contactPhone": "0972773693",
+      "interests": [
+        "Xem phim",
+        "Nấu ăn",
+        "Yoga"
+      ],
+      "lifestyle": [
+        "Yên tĩnh",
+        "Dậy sớm",
+        "Học tập nhiều"
+      ],
+      "images": [
+        "blob:http://localhost:5173/14134b57-7a11-4f65-9896-47d2f5b8684f"
+      ],
+      "createdAt": "2025-07-16T04:51:48.250Z",
+      "updatedAt": "2025-07-16T04:51:48.250Z",
+      "status": "active",
+      "views": 0,
+      "likes": 0
     }
   ],
   "constants": {
@@ -347,18 +537,58 @@
       "Mặt bằng"
     ],
     "PRICE_RANGES": [
-      { "label": "Dưới 1 triệu", "min": 0, "max": 1000000 },
-      { "label": "Từ 1 - 2 triệu", "min": 1000000, "max": 2000000 },
-      { "label": "Từ 2 - 3 triệu", "min": 2000000, "max": 3000000 },
-      { "label": "Từ 3 - 5 triệu", "min": 3000000, "max": 5000000 },
-      { "label": "Từ 5 - 7 triệu", "min": 5000000, "max": 7000000 },
-      { "label": "Trên 7 triệu", "min": 7000000, "max": 1.7976931348623157e+308 }
+      {
+        "label": "Dưới 1 triệu",
+        "min": 0,
+        "max": 1000000
+      },
+      {
+        "label": "Từ 1 - 2 triệu",
+        "min": 1000000,
+        "max": 2000000
+      },
+      {
+        "label": "Từ 2 - 3 triệu",
+        "min": 2000000,
+        "max": 3000000
+      },
+      {
+        "label": "Từ 3 - 5 triệu",
+        "min": 3000000,
+        "max": 5000000
+      },
+      {
+        "label": "Từ 5 - 7 triệu",
+        "min": 5000000,
+        "max": 7000000
+      },
+      {
+        "label": "Trên 7 triệu",
+        "min": 7000000,
+        "max": 1.7976931348623157e+308
+      }
     ],
     "AREA_RANGES": [
-      { "label": "Dưới 20 m²", "min": 0, "max": 20 },
-      { "label": "Từ 20 - 30m²", "min": 20, "max": 30 },
-      { "label": "Từ 30 - 50m²", "min": 30, "max": 50 },
-      { "label": "Trên 50m²", "min": 50, "max": 1.7976931348623157e+308 }
+      {
+        "label": "Dưới 20 m²",
+        "min": 0,
+        "max": 20
+      },
+      {
+        "label": "Từ 20 - 30m²",
+        "min": 20,
+        "max": 30
+      },
+      {
+        "label": "Từ 30 - 50m²",
+        "min": 30,
+        "max": 50
+      },
+      {
+        "label": "Trên 50m²",
+        "min": 50,
+        "max": 1.7976931348623157e+308
+      }
     ],
     "AMENITIES_LIST": [
       "Máy lạnh",
@@ -392,13 +622,20 @@
       "gender": "male",
       "city": "Hồ Chí Minh",
       "bio": "Sinh viên năng động, tìm bạn ghép trọ hòa đồng, sạch sẽ.",
-      "interests": ["Đọc sách", "Xem phim", "Chơi game"],
+      "interests": [
+        "Đọc sách",
+        "Xem phim",
+        "Chơi game"
+      ],
       "lookingFor": {
         "gender": "any",
         "ageRange": "18-25",
         "budget": "2-3m",
         "location": "Quận 1, Quận Bình Thạnh",
-        "lifestyle": ["Sạch sẽ", "Yên tĩnh"]
+        "lifestyle": [
+          "Sạch sẽ",
+          "Yên tĩnh"
+        ]
       },
       "verified": true,
       "responseRate": 90,
@@ -420,18 +657,34 @@
       "gender": "female",
       "city": "Hà Nội",
       "bio": "Sinh viên thân thiện, tìm bạn cùng phòng gần trường.",
-      "interests": ["Nghe nhạc", "Du lịch", "Nấu ăn"],
+      "interests": [
+        "Nghe nhạc",
+        "Du lịch",
+        "Nấu ăn"
+      ],
       "lookingFor": {
         "gender": "female",
         "ageRange": "19-24",
         "budget": "1-2m",
         "location": "Quận Hai Bà Trưng",
-        "lifestyle": ["Thân thiện", "Không hút thuốc"]
+        "lifestyle": [
+          "Thân thiện",
+          "Không hút thuốc"
+        ]
       },
       "verified": false,
       "responseRate": 85,
       "responseTime": "Trong 2 giờ",
       "joinDate": "2023-02-15T00:00:00.000Z"
+    },
+    {
+      "id": "74ad",
+      "email": "abc@gmail.com",
+      "password": "123456",
+      "fullName": "Trần Hoàng Hải",
+      "phone": "0972773693",
+      "createdAt": "2025-07-16T03:40:57.759Z",
+      "updatedAt": "2025-07-16T03:40:57.759Z"
     }
   ],
   "connections": [],

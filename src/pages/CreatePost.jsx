@@ -106,14 +106,14 @@ const CreatePost = () => {
     setIsLoading(true);
     setError('');
     try {
-      const newImageUrls = files.map(file => `/images/${file.name}`); // Mock URLs
+      const newImageUrls = files.map(file => URL.createObjectURL(file)); // Create temporary URLs for immediate display
       setFormData(prev => ({
         ...prev,
         images: [...prev.images, ...newImageUrls]
       }));
     } catch (err) {
-      setError('Lỗi tải ảnh lên. (Không có backend xử lý ảnh)');
-      console.error('Error simulating image upload:', err);
+      setError('Lỗi tải ảnh lên.');
+      console.error('Error creating image URL:', err);
     } finally {
       setIsLoading(false);
     }
@@ -569,16 +569,18 @@ const CreatePost = () => {
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Hình ảnh đã chọn:</h3>
                 <div className="flex flex-wrap gap-2">
                   {formData.images.map((image, index) => (
-                    <div key={index} className="relative bg-gray-100 rounded-lg p-2 flex items-center">
-                      <span className="text-sm text-gray-600 mr-2">{image}</span>
+                    <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-300">
+                      <img
+                        src={image}
+                        alt={`Uploaded ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="text-red-500 hover:text-red-700"
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
