@@ -1,6 +1,6 @@
 import { forwardRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '../../utils/cn';
+import clsx from 'clsx';
 import { X } from 'lucide-react';
 
 const Modal = forwardRef(({
@@ -61,7 +61,7 @@ const Modal = forwardRef(({
       {/* Modal */}
       <div
         ref={ref}
-        className={cn(
+        className={clsx(
           "relative w-full bg-white rounded-2xl shadow-2xl animate-scaleIn",
           sizes[size],
           className
@@ -82,14 +82,14 @@ Modal.displayName = "Modal";
 const ModalHeader = forwardRef(({ className, children, onClose, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center justify-between p-6 border-b border-secondary-100", className)}
+    className={clsx("flex items-center justify-between p-6 border-b border-secondary-100", className)}
     {...props}
   >
     <div className="flex-1">{children}</div>
     {onClose && (
       <button
         onClick={onClose}
-        className="ml-4 p-2 text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 rounded-lg transition-colors"
+        className={clsx("ml-4 p-2 text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 rounded-lg transition-colors")}
       >
         <X size={20} />
       </button>
@@ -101,7 +101,7 @@ ModalHeader.displayName = "ModalHeader";
 const ModalTitle = forwardRef(({ className, children, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("text-xl font-semibold text-secondary-900", className)}
+    className={clsx("text-xl font-semibold text-secondary-900", className)}
     {...props}
   >
     {children}
@@ -112,7 +112,7 @@ ModalTitle.displayName = "ModalTitle";
 const ModalDescription = forwardRef(({ className, children, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-secondary-600 mt-1", className)}
+    className={clsx("text-sm text-secondary-600 mt-1", className)}
     {...props}
   >
     {children}
@@ -123,7 +123,7 @@ ModalDescription.displayName = "ModalDescription";
 const ModalContent = forwardRef(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("p-6", className)}
+    className={clsx("p-6", className)}
     {...props}
   >
     {children}
@@ -134,7 +134,7 @@ ModalContent.displayName = "ModalContent";
 const ModalFooter = forwardRef(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center justify-end space-x-3 p-6 border-t border-secondary-100", className)}
+    className={clsx("flex items-center justify-end space-x-3 p-6 border-t border-secondary-100", className)}
     {...props}
   >
     {children}
@@ -149,4 +149,4 @@ export {
   ModalDescription,
   ModalContent,
   ModalFooter,
-}; 
+};

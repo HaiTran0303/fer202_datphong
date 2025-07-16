@@ -381,7 +381,7 @@
         "Yên tĩnh"
       ],
       "images": [
-        "/images/1.jpg"
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
       "createdAt": "2025-07-16T04:32:37.068Z",
       "updatedAt": "2025-07-16T04:32:37.069Z",
@@ -416,7 +416,7 @@
         "Học tập nhiều"
       ],
       "images": [
-        "blob:http://localhost:5173/14134b57-7a11-4f65-9896-47d2f5b8684f"
+        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
       "createdAt": "2025-07-16T04:51:48.250Z",
       "updatedAt": "2025-07-16T04:51:48.250Z",
@@ -612,6 +612,7 @@
       "email": "demo@test.com",
       "password": "123456",
       "fullName": "Demo User",
+      "role": "admin",
       "phone": "0901234567",
       "avatar": "https://via.placeholder.com/150",
       "createdAt": "2023-01-01T00:00:00.000Z",
@@ -647,6 +648,7 @@
       "email": "test@test.com",
       "password": "123456",
       "fullName": "Test User",
+      "role": "user",
       "phone": "0908765432",
       "avatar": "https://via.placeholder.com/150",
       "createdAt": "2023-02-15T00:00:00.000Z",
@@ -682,6 +684,7 @@
       "email": "abc@gmail.com",
       "password": "123456",
       "fullName": "Trần Hoàng Hải",
+      "role": "user",
       "phone": "0972773693",
       "createdAt": "2025-07-16T03:40:57.759Z",
       "updatedAt": "2025-07-16T03:40:57.759Z"

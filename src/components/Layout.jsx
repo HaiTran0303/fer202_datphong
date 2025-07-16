@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Removed useNavigate
 import { User, LogOut, FileText, Settings, ChevronDown, UserPlus } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
-const Layout = ({ children }) => {
+const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added searchTermValue, onSearchSubmit props
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null); // Simulated currentUser
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [headerSearchTerm, setHeaderSearchTerm] = useState(searchTermValue || ''); // Initialize with prop
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    setHeaderSearchTerm(searchTermValue || ''); // Update when prop changes
+  }, [searchTermValue]);
 
   useEffect(() => {
     // Check localStorage for currentUser to simulate login state
@@ -79,16 +84,20 @@ const Layout = ({ children }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm tin đăng..."
-                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
-                />
-                <button className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
+                <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit(headerSearchTerm); }} className="flex-1 flex">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm tin đăng..."
+                    className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                    value={headerSearchTerm}
+                    onChange={(e) => setHeaderSearchTerm(e.target.value)}
+                  />
+                  <button type="submit" className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -171,6 +180,16 @@ const Layout = ({ children }) => {
                           <Settings className="w-4 h-4 mr-2" />
                           Cài đặt
                         </Link>
+                        {currentUser && currentUser.role === 'admin' && (
+                          <Link
+                            to="/admin"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            onClick={() => setShowUserDropdown(false)}
+                          >
+                            <Settings className="w-4 h-4 mr-2" />
+                            Admin Dashboard
+                          </Link>
+                        )}
                         <hr className="my-1" />
                         <button
                           onClick={handleLogout}
