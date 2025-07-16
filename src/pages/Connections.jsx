@@ -19,507 +19,40 @@ import {
   Search
 } from 'lucide-react';
 
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  getDoc,
-  serverTimestamp,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase/config';
-
-// Collections
-const CONNECTIONS_COLLECTION = 'connections';
-const MESSAGES_COLLECTION = 'messages';
-const NOTIFICATIONS_COLLECTION = 'notifications'; // Keep if createNotification is still here and uses it
-
-// Helper functions (formerly from connectionService.js)
-// Gửi lời mời kết nối
-async function sendConnectionRequest(fromUserId, toUserId, postId, message = '') {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - using mock data');
-      return {
-        id: `mock-connection-${Date.now()}`,
-        fromUserId,
-        toUserId,
-        postId,
-        message,
-        status: 'pending',
-        createdAt: new Date().toISOString()
-      };
-    }
-
-    const connectionData = {
-      fromUserId,
-      toUserId,
-      postId,
-      message,
-      status: 'pending',
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
-
-    const docRef = await addDoc(collection(db, CONNECTIONS_COLLECTION), connectionData);
-    
-    // Tạo thông báo cho người nhận
-    await createNotification(toUserId, 'connection_request', {
-      fromUserId,
-      connectionId: docRef.id,
-      postId,
-      message
-    });
-
-    // Tạo tin nhắn đầu tiên (tích hợp với gửi tin nhắn)
-    await addDoc(collection(db, MESSAGES_COLLECTION), {
-      connectionId: docRef.id,
-      fromUserId,
-      toUserId,
-      postId,
-      content: message,
-      type: 'text',
-      createdAt: serverTimestamp(),
-      isSystem: true // đánh dấu là tin nhắn hệ thống (lời mời)
-    });
-
-    return {
-      id: docRef.id,
-      ...connectionData
-    };
-  } catch (error) {
-    console.error('Error sending connection request:', error);
-    throw error;
-  }
-}
-
-// Lấy danh sách lời mời đã gửi
+// Mock functions to replace Firebase calls
 async function getSentConnections(userId) {
-  try {
-    if (!db) {
-      return [];
-    }
-
-    const q = query(
-      collection(db, CONNECTIONS_COLLECTION),
-      where('fromUserId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-    const connections = [];
-
-    for (const connectionDoc of querySnapshot.docs) {
-      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
-      
-      // Lấy thông tin người nhận
-      if (connection.toUserId) {
-        const toUserDoc = await getDoc(doc(db, 'users', connection.toUserId));
-        if (toUserDoc.exists()) {
-          connection.toUser = { uid: toUserDoc.id, ...toUserDoc.data() };
-        } else {
-          connection.toUser = { uid: connection.toUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
-          console.warn('Connections: toUser document not found for ID:', connection.toUserId, 'Using placeholder.');
-        }
-      } else {
-        console.warn('Connections: toUserId is undefined for connection:', connection.id);
-      }
-
-      // Lấy thông tin bài đăng
-      if (connection.postId) {
-        const postDoc = await getDoc(doc(db, 'posts', connection.postId));
-        if (postDoc.exists()) {
-          connection.post = { id: postDoc.id, ...postDoc.data() };
-        } else {
-          console.warn('Connections: Post document not found for ID:', connection.postId);
-        }
-      } else {
-        console.warn('Connections: postId is undefined for connection:', connection.id);
-      }
-
-      connections.push(connection);
-    }
-
-    return connections;
-  } catch (error) {
-    console.error('Error getting sent connections:', error);
-    return [];
-  }
+  console.log('Mock: getSentConnections called for userId:', userId);
+  return [];
 }
 
-// Lấy danh sách lời mời đã nhận
 async function getReceivedConnections(userId) {
-  try {
-    if (!db) {
-      return [];
-    }
-
-    const q = query(
-      collection(db, CONNECTIONS_COLLECTION),
-      where('toUserId', '==', userId),
-      orderBy('createdAt', 'desc')
-    );
-
-    const querySnapshot = await getDocs(q);
-    const connections = [];
-
-    for (const connectionDoc of querySnapshot.docs) {
-      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
-      
-      // Lấy thông tin người gửi
-      if (connection.fromUserId) {
-        const fromUserDoc = await getDoc(doc(db, 'users', connection.fromUserId));
-        if (fromUserDoc.exists()) {
-          connection.fromUser = { uid: fromUserDoc.id, ...fromUserDoc.data() };
-        } else {
-          connection.fromUser = { uid: connection.fromUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
-          console.warn('Connections: fromUser document not found for ID:', connection.fromUserId, 'Using placeholder.');
-        }
-      } else {
-        console.warn('Connections: fromUserId is undefined for connection:', connection.id);
-      }
-
-      // Lấy thông tin bài đăng
-      if (connection.postId) {
-        const postDoc = await getDoc(doc(db, 'posts', connection.postId));
-        if (postDoc.exists()) {
-          connection.post = { id: postDoc.id, ...postDoc.data() };
-        } else {
-          console.warn('Connections: Post document not found for ID:', connection.postId);
-        }
-      } else {
-        console.warn('Connections: postId is undefined for connection:', connection.id);
-      }
-
-      connections.push(connection);
-    }
-
-    return connections;
-  } catch (error) {
-    console.error('Error getting received connections:', error);
-    return [];
-  }
+  console.log('Mock: getReceivedConnections called for userId:', userId);
+  return [];
 }
 
-// Chấp nhận lời mời kết nối
-async function acceptConnection(connectionId) {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - using mock data');
-      return { success: true };
-    }
-
-    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
-    const connectionDoc = await getDoc(connectionRef);
-    
-    if (!connectionDoc.exists()) {
-      throw new Error('Connection not found');
-    }
-
-    const connection = connectionDoc.data();
-    
-    // Cập nhật trạng thái
-    await updateDoc(connectionRef, {
-      status: 'accepted',
-      updatedAt: serverTimestamp()
-    });
-
-    // Tạo thông báo cho người gửi
-    await createNotification(connection.fromUserId, 'connection_accepted', {
-      toUserId: connection.toUserId,
-      connectionId,
-      postId: connection.postId
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error accepting connection:', error);
-    throw error;
-  }
-}
-
-// Từ chối lời mời kết nối
-async function declineConnection(connectionId) {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - using mock data');
-      return { success: true };
-    }
-
-    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
-    const connectionDoc = await getDoc(connectionRef);
-    
-    if (!connectionDoc.exists()) {
-      throw new Error('Connection not found');
-    }
-
-    const connection = connectionDoc.data();
-    
-    // Cập nhật trạng thái
-    await updateDoc(connectionRef, {
-      status: 'declined',
-      updatedAt: serverTimestamp()
-    });
-
-    // Tạo thông báo cho người gửi
-    await createNotification(connection.fromUserId, 'connection_declined', {
-      toUserId: connection.toUserId,
-      connectionId,
-      postId: connection.postId
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error declining connection:', error);
-    throw error;
-  }
-}
-
-// Hủy lời mời kết nối
-async function cancelConnection(connectionId) {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - using mock data');
-      return { success: true };
-    }
-
-    const connectionRef = doc(db, CONNECTIONS_COLLECTION, connectionId);
-    const connectionDoc = await getDoc(connectionRef);
-    
-    if (!connectionDoc.exists()) {
-      throw new Error('Connection not found');
-    }
-
-    const connection = connectionDoc.data();
-    
-    // Xóa lời mời
-    await deleteDoc(connectionRef);
-
-    // Tạo thông báo cho người nhận
-    await createNotification(connection.toUserId, 'connection_cancelled', {
-      fromUserId: connection.fromUserId,
-      connectionId,
-      postId: connection.postId
-    });
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error cancelling connection:', error);
-    throw error;
-  }
-}
-
-// Tạo thông báo (This function is kept here because sendConnectionRequest and other functions in this file use it)
-async function createNotification(userId, type, data) {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - skipping notification');
-      return;
-    }
-
-    const notificationData = {
-      userId,
-      type,
-      data,
-      isRead: false,
-      createdAt: serverTimestamp()
-    };
-
-    await addDoc(collection(db, NOTIFICATIONS_COLLECTION), notificationData);
-  } catch (error) {
-    console.error('Error creating notification:', error);
-  }
-}
-
-
-// Gửi tin nhắn
-async function sendMessage(connectionId, fromUserId, toUserId, content, type = 'text') {
-  try {
-    if (!db) {
-      console.warn('Firebase not initialized - skipping send message');
-      return;
-    }
-    const messageData = {
-      connectionId,
-      fromUserId,
-      toUserId,
-      content,
-      type,
-      createdAt: serverTimestamp()
-    };
-    await addDoc(collection(db, MESSAGES_COLLECTION), messageData);
-  } catch (error) {
-    console.error('Error sending message:', error);
-    throw error;
-  }
-}
-
-// Lấy tất cả các cuộc trò chuyện đang hoạt động (kết nối đã chấp nhận)
 async function getActiveConversations(userId) {
-  try {
-    if (!db) {
-      return [];
-    }
-    // Lấy các kết nối đã chấp nhận mà người dùng hiện tại là fromUserId hoặc toUserId
-    const q1 = query(
-      collection(db, CONNECTIONS_COLLECTION),
-      where('fromUserId', '==', userId),
-      where('status', '==', 'accepted')
-    );
-    const q2 = query(
-      collection(db, CONNECTIONS_COLLECTION),
-      where('toUserId', '==', userId),
-      where('status', '==', 'accepted')
-    );
-
-    const [snapshot1, snapshot2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-    const connections = [];
-
-    const processConnection = async (connectionDoc) => {
-      const connection = { id: connectionDoc.id, ...connectionDoc.data() };
-      
-      // Lấy thông tin người dùng khác trong cuộc trò chuyện
-      const otherUserId = connection.fromUserId === userId ? connection.toUserId : connection.fromUserId;
-      const otherUserDoc = await getDoc(doc(db, 'users', otherUserId));
-      if (otherUserDoc.exists()) {
-        connection.otherUser = { uid: otherUserDoc.id, ...otherUserDoc.data() };
-      } else {
-        connection.otherUser = { uid: otherUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' };
-        console.warn('Connections: Other user document not found for ID:', otherUserId, 'Using placeholder.');
-      }
-
-      // Lấy thông tin bài đăng
-      const postDoc = await getDoc(doc(db, 'posts', connection.postId));
-      if (postDoc.exists()) {
-        connection.post = { id: postDoc.id, ...postDoc.data() };
-      } else {
-        console.warn('Connections: Post document not found for ID:', connection.postId);
-      }
-      connections.push(connection);
-    };
-
-    await Promise.all(snapshot1.docs.map(processConnection));
-    await Promise.all(snapshot2.docs.map(processConnection));
-
-    // Sắp xếp theo thời gian cập nhật gần nhất (hoặc tin nhắn cuối cùng)
-    connections.sort((a, b) => (b.updatedAt?.toDate() || 0) - (a.updatedAt?.toDate() || 0));
-
-    return connections;
-  } catch (error) {
-    console.error('Error getting active conversations:', error);
-    return [];
-  }
+  console.log('Mock: getActiveConversations called for userId:', userId);
+  return [];
 }
 
-// Lắng nghe thay đổi tin nhắn trong một cuộc trò chuyện cụ thể
-function onMessagesUpdate(connectionId, callback) {
-  if (!db) {
-    console.warn('Firebase not initialized - cannot listen to message changes');
-    return () => {};
-  }
-
-  const q = query(
-    collection(db, MESSAGES_COLLECTION),
-    where('connectionId', '==', connectionId),
-    orderBy('createdAt', 'asc')
-  );
-
-  return onSnapshot(q, (snapshot) => {
-    const messages = [];
-    snapshot.forEach((messageDoc) => {
-      const message = { id: messageDoc.id, ...messageDoc.data() };
-      messages.push({
-        id: message.id,
-        sender: message.fromUserId, // Will map to 'currentUser' or 'otherUser' in Connections.jsx
-        content: message.content,
-        timestamp: message.createdAt?.toDate ? message.createdAt.toDate().toISOString() : new Date().toISOString(),
-        fromUserId: message.fromUserId, // Keep for comparison in frontend
-        toUserId: message.toUserId // Keep for comparison in frontend
-      });
-    });
-    callback(messages);
-  });
+async function sendMessage(connectionId, fromUserId, toUserId, content) {
+  console.log('Mock: sendMessage called:', { connectionId, fromUserId, toUserId, content });
+  return { id: `mock-msg-${Date.now()}`, connectionId, fromUserId, toUserId, content, createdAt: new Date().toISOString() };
 }
 
-// Lắng nghe thay đổi kết nối
-function onConnectionsChange(userId, callback) {
-  if (!db) {
-    console.warn('Firebase not initialized - cannot listen to changes');
-    return () => {};
-  }
-
-  const q = query(
-    collection(db, CONNECTIONS_COLLECTION),
-    where('toUserId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
-
-  return onSnapshot(q, (snapshot) => {
-    const connections = [];
-    snapshot.forEach((connectionDoc) => {
-      connections.push({ id: connectionDoc.id, ...connectionDoc.data() });
-    });
-    callback(connections);
-  });
+async function acceptConnection(connectionId) {
+  console.log('Mock: acceptConnection called for connectionId:', connectionId);
+  return { success: true };
 }
 
-// Lấy tin nhắn theo connectionId
+async function declineConnection(connectionId) {
+  console.log('Mock: declineConnection called for connectionId:', connectionId);
+  return { success: true };
+}
+
 async function getMessagesByConnectionId(connectionId) {
-  try {
-    if (!db) {
-      return [];
-    }
-
-    const q = query(
-      collection(db, MESSAGES_COLLECTION),
-      where('connectionId', '==', connectionId),
-      orderBy('createdAt', 'asc')
-    );
-
-    console.log('Connections: Querying messages for connectionId:', connectionId);
-    const querySnapshot = await getDocs(q);
-    console.log('Connections: querySnapshot size:', querySnapshot.size);
-    const messages = [];
-
-    for (const messageDoc of querySnapshot.docs) {
-      const message = { id: messageDoc.id, ...messageDoc.data() };
-      
-      // Lấy thông tin người gửi
-      if (message.fromUserId) {
-        const fromUserDoc = await getDoc(doc(db, 'users', message.fromUserId));
-        if (fromUserDoc.exists()) {
-          message.fromUser = fromUserDoc.data();
-        } else {
-          console.warn('Connections: Message sender (fromUser) document not found for ID:', message.fromUserId);
-        }
-      } else {
-        console.warn('Connections: Message has undefined fromUserId for message:', message.id);
-      }
-      // Lấy thông tin người nhận
-      if (message.toUserId) {
-        const toUserDoc = await getDoc(doc(db, 'users', message.toUserId));
-        if (toUserDoc.exists()) {
-          message.toUser = toUserDoc.data();
-        } else {
-          console.warn('Connections: Message receiver (toUser) document not found for ID:', message.toUserId);
-        }
-      } else {
-        console.warn('Connections: Message has undefined toUserId for message:', message.id);
-      }
-      messages.push(message);
-    }
-    console.log('Connections: Messages array before return:', messages);
-    return messages;
-  } catch (error) {
-    console.error('Error getting messages by connection ID:', error);
-    return [];
-  }
+  console.log('Mock: getMessagesByConnectionId called for connectionId:', connectionId);
+  return [];
 }
 
 function Connections() {
@@ -541,76 +74,16 @@ function Connections() {
   useEffect(() => {
     fetchConnections();
 
-    // Setup real-time listener for connections/invitations
-    let unsubscribeConnections;
-    if (currentUser) {
-      unsubscribeConnections = onConnectionsChange(currentUser.uid, async (connections) => {
-        // Re-fetch full user and post data for real-time updates
-        const sent = [];
-        const received = [];
-
-        for (const conn of connections) {
-          if (conn.fromUserId === currentUser.uid) {
-            // Sent invitation
-            const toUserDoc = await getDoc(doc(db, 'users', conn.toUserId));
-            const postDoc = await getDoc(doc(db, 'posts', conn.postId));
-            sent.push({
-              id: conn.id,
-              type: 'sent',
-              toUser: toUserDoc.exists() ? { uid: toUserDoc.id, ...toUserDoc.data() } : { uid: conn.toUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' },
-              postId: conn.postId,
-              postTitle: postDoc.exists() ? postDoc.data().title : 'Bài đăng',
-              message: conn.message,
-              timestamp: conn.createdAt,
-              status: conn.status
-            });
-          } else if (conn.toUserId === currentUser.uid) {
-            // Received invitation
-            const fromUserDoc = await getDoc(doc(db, 'users', conn.fromUserId));
-            const postDoc = await getDoc(doc(db, 'posts', conn.postId));
-            received.push({
-              id: conn.id,
-              type: 'received',
-              fromUser: fromUserDoc.exists() ? { uid: fromUserDoc.id, ...fromUserDoc.data() } : { uid: conn.fromUserId, name: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48' },
-              postId: conn.postId,
-              postTitle: postDoc.exists() ? postDoc.data().title : 'Bài đăng',
-              message: conn.message,
-              timestamp: conn.createdAt,
-              status: conn.status
-            });
-          }
-        }
-        setSentInvitations(sent);
-        setReceivedInvitations(received);
-      });
-    }
-
-    return () => {
-      if (unsubscribeConnections) {
-        unsubscribeConnections();
-      }
-    };
+    // Setup real-time listener for connections/invitations (Mock - no-op)
+    // Removed Firebase specific real-time listeners and data fetching
+    // The data will be fetched once on component mount via fetchConnections
+    return () => {}; // Return a no-op cleanup function
   }, [currentUser]); // Only re-run if currentUser changes
 
   useEffect(() => {
-    let unsubscribeMessages;
-    if (selectedConversation && selectedConversation.id && currentUser) {
-      unsubscribeMessages = onMessagesUpdate(selectedConversation.id, (messages) => {
-        setSelectedConversation(prev => ({
-          ...prev,
-          conversation: messages.map(msg => ({
-            ...msg,
-            sender: msg.fromUserId === currentUser.uid ? 'currentUser' : 'otherUser'
-          }))
-        }));
-      });
-    }
-
-    return () => {
-      if (unsubscribeMessages) {
-        unsubscribeMessages();
-      }
-    };
+    // Removed Firebase specific real-time listeners for messages
+    // Messages will be fetched once on conversation selection
+    return () => {}; // Return a no-op cleanup function
   }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
 
   const fetchConnections = async () => {
@@ -859,20 +332,6 @@ function Connections() {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Kết nối</h1>
         <p className="text-gray-600">Quản lý tin nhắn, lời mời và gợi ý kết nối</p>
-        {/* Placeholder button to demonstrate sendConnectionRequest */}
-        <button 
-          onClick={() => sendConnectionRequest(currentUser.uid, 'some_other_user_id', 'some_post_id', 'Hello from Connections!')}
-          className="mt-4 bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600"
-        >
-          Test Send Connection Request
-        </button>
-        {/* Placeholder button to demonstrate cancelConnection */}
-        <button 
-          onClick={() => cancelConnection('some_connection_id_to_cancel')} // Replace with an actual connection ID for testing
-          className="mt-4 ml-2 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-        >
-          Test Cancel Connection
-        </button>
       </div>
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-lg mb-6">
