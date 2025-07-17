@@ -12,7 +12,6 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-
 // Mock data storage for connections
 let mockConnections = [];
 

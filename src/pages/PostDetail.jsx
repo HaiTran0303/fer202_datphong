@@ -526,7 +526,6 @@ function PostDetail() {
                 <span className="font-medium">{authorInfo?.responseRate || 'N/A'}%</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Thời gian phản hồi:</span>
                 <span className="font-medium">{authorInfo?.responseTime || 'N/A'}</span>
               </div>
             </div>
@@ -609,6 +608,19 @@ function PostDetail() {
                 </button>
               </>
             )}
+            
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+              {post.images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`w-3 h-3 rounded-full ${
+                    index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                  }`}
+                  tabIndex="0"
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}

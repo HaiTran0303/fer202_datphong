@@ -683,6 +683,15 @@
       "createdAt": "2025-07-17T11:56:34.995Z",
       "updatedAt": "2025-07-17T11:56:34.995Z",
       "role": "user"
+    },
+    {
+      "id": "81ed",
+      "fullName": "Trần Hoàng Hải",
+      "email": "az@gmail.com",
+      "password": "123456",
+      "role": "admin",
+      "isActive": true,
+      "creationTime": "2025-07-17T12:46:24.260Z"
     }
   ],
   "connections": [],

@@ -224,4 +224,4 @@ function RatingModal({ isOpen, onClose, roommate, onSubmit }) {
   );
 }
 
-export default RatingModal; 
+export default RatingModal;

@@ -42,7 +42,7 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
     setCurrentUser(null); // Clear user from state
     setShowUserDropdown(false);
     // Optionally redirect to login page
-    // navigate('/login');
+    navigate('/login');
   };
 
   const handleClickCreatePost = () => {
