@@ -84,6 +84,7 @@ function Login() {
         localStorage.setItem('rememberMe', 'true');
       }
       
+      console.log('User role:', user.role); // Add this line to log the user role
       if (user.role === 'admin') {
         navigate('/admin-dashboard');
       } else if (user.role === 'user') {

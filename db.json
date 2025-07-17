@@ -24,7 +24,6 @@
       ],
       "utilities": [
         "Điện",
-
         "Nước",
         "Internet"
       ],
@@ -446,7 +445,12 @@
       "images": [
         "https://images.unsplash.com/photo-1549517045-bc93de0e06ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "tags": ["phòng trọ", "sinh viên", "FPT", "bí quyết"]
+      "tags": [
+        "phòng trọ",
+        "sinh viên",
+        "FPT",
+        "bí quyết"
+      ]
     },
     {
       "id": "blog2",
@@ -457,7 +461,12 @@
       "images": [
         "https://images.unsplash.com/photo-1593062095908-1647f3a8b276?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "tags": ["tiết kiệm", "chi phí", "sinh hoạt", "ở trọ"]
+      "tags": [
+        "tiết kiệm",
+        "chi phí",
+        "sinh hoạt",
+        "ở trọ"
+      ]
     },
     {
       "id": "blog3",
@@ -468,7 +477,12 @@
       "images": [
         "https://images.unsplash.com/photo-1521742918805-f933b0064d30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
       ],
-      "tags": ["bạn cùng phòng", "hòa nhập", "sinh hoạt", "kinh nghiệm"]
+      "tags": [
+        "bạn cùng phòng",
+        "hòa nhập",
+        "sinh hoạt",
+        "kinh nghiệm"
+      ]
     }
   ],
   "constants": {
@@ -749,6 +763,16 @@
       "role": "admin",
       "isActive": true,
       "creationTime": "2025-07-17T03:58:55.610Z"
+    },
+    {
+      "id": "d814",
+      "email": "add@gmail.com",
+      "password": "123456",
+      "fullName": "Trần Hoàng Hải",
+      "phone": "0972773693",
+      "createdAt": "2025-07-17T11:45:55.735Z",
+      "updatedAt": "2025-07-17T11:45:55.735Z",
+      "role": "user"
     }
   ],
   "connections": [],
