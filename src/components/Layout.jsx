@@ -74,15 +74,18 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl mx-8">
               <div className="flex border border-gray-300 rounded overflow-hidden">
-                <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit(headerSearchTerm); }} className="flex-1 flex">
+                <form className="flex-1 flex">
                   <input
                     type="text"
                     placeholder="Tìm kiếm tin đăng..."
                     className="flex-1 px-3 py-2 text-sm focus:outline-none"
                     value={headerSearchTerm}
-                    onChange={(e) => setHeaderSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setHeaderSearchTerm(e.target.value);
+                      onSearchSubmit(e.target.value); // Trigger search on change
+                    }}
                   />
-                  <button type="submit" className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
+                  <button type="button" className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
