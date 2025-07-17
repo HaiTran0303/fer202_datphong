@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { cn } from '../../utils/cn';
+import clsx from 'clsx';
 
 const Input = forwardRef(({
   className,
@@ -46,7 +46,7 @@ const Input = forwardRef(({
   return (
     <div className="space-y-1">
       {label && (
-        <label className={cn(
+        <label className={clsx(
           "block text-sm font-medium",
           error ? "text-error-700" : "text-secondary-700"
         )}>
@@ -56,7 +56,7 @@ const Input = forwardRef(({
       
       <div className="relative">
         {leftIcon && (
-          <div className={cn(
+          <div className={clsx(
             "absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none",
             error ? "text-error-500" : "text-secondary-400",
             iconSizes[size]
@@ -68,7 +68,7 @@ const Input = forwardRef(({
         <input
           ref={ref}
           type={type}
-          className={cn(
+          className={clsx(
             baseStyles,
             variants[variant],
             sizes[size],
@@ -80,7 +80,7 @@ const Input = forwardRef(({
         />
         
         {rightIcon && (
-          <div className={cn(
+          <div className={clsx(
             "absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none",
             error ? "text-error-500" : "text-secondary-400",
             iconSizes[size]
@@ -91,7 +91,7 @@ const Input = forwardRef(({
       </div>
       
       {(helperText || error) && (
-        <p className={cn(
+        <p className={clsx(
           "text-sm",
           error ? "text-error-600" : "text-secondary-500"
         )}>
@@ -104,4 +104,4 @@ const Input = forwardRef(({
 
 Input.displayName = "Input";
 
-export default Input; 
+export default Input;

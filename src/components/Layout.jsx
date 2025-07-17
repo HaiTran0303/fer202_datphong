@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Removed useNavigate
 import { User, LogOut, FileText, Settings, ChevronDown, UserPlus } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
-const Layout = ({ children }) => {
+const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added searchTermValue, onSearchSubmit props
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null); // Simulated currentUser
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [headerSearchTerm, setHeaderSearchTerm] = useState(searchTermValue || ''); // Initialize with prop
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    setHeaderSearchTerm(searchTermValue || ''); // Update when prop changes
+  }, [searchTermValue]);
 
   useEffect(() => {
     // Check localStorage for currentUser to simulate login state
@@ -69,26 +74,23 @@ const Layout = ({ children }) => {
             {/* Search Bar */}
             <div className="flex-1 max-w-2xl mx-8">
               <div className="flex border border-gray-300 rounded overflow-hidden">
-                <div className="flex items-center px-3 py-2 bg-gray-50 border-r border-gray-300 min-w-0">
-                  <svg className="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="text-gray-600 text-sm whitespace-nowrap">Toàn quốc</span>
-                  <svg className="w-4 h-4 ml-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm tin đăng..."
-                  className="flex-1 px-3 py-2 text-sm focus:outline-none"
-                />
-                <button className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </button>
+                <form className="flex-1 flex">
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm tin đăng..."
+                    className="flex-1 px-3 py-2 text-sm focus:outline-none"
+                    value={headerSearchTerm}
+                    onChange={(e) => {
+                      setHeaderSearchTerm(e.target.value);
+                      onSearchSubmit(e.target.value); // Trigger search on change
+                    }}
+                  />
+                  <button type="button" className="px-4 py-2 bg-orange-500 text-white hover:bg-orange-600 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </button>
+                </form>
               </div>
             </div>
 
@@ -171,6 +173,16 @@ const Layout = ({ children }) => {
                           <Settings className="w-4 h-4 mr-2" />
                           Cài đặt
                         </Link>
+                        {currentUser && currentUser.role === 'admin' && (
+                          <Link
+                            to="/admin"
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                            onClick={() => setShowUserDropdown(false)}
+                          >
+                            <Settings className="w-4 h-4 mr-2" />
+                            Admin Dashboard
+                          </Link>
+                        )}
                         <hr className="my-1" />
                         <button
                           onClick={handleLogout}
@@ -227,66 +239,6 @@ const Layout = ({ children }) => {
               Phòng trọ
             </Link>
             <Link 
-              to="/nha-nguyen-can" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/nha-nguyen-can' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Nhà nguyên căn
-            </Link>
-            <Link 
-              to="/can-ho-chung-cu" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-chung-cu' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ chung cư
-            </Link>
-            <Link 
-              to="/can-ho-mini" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-mini' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ mini
-            </Link>
-            <Link 
-              to="/can-ho-dich-vu" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-dich-vu' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ dịch vụ
-            </Link>
-            <Link 
-              to="/o-ghep" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/o-ghep' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Ở ghép
-            </Link>
-            <Link 
-              to="/mat-bang" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/mat-bang' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Mặt bằng
-            </Link>
-            <Link 
               to="/blog" 
               className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                 location.pathname === '/blog' 
@@ -295,16 +247,6 @@ const Layout = ({ children }) => {
               }`}
             >
               Blog
-            </Link>
-            <Link 
-              to="/bang-gia" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/bang-gia' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Bảng giá dịch vụ
             </Link>
           </div>
         </div>

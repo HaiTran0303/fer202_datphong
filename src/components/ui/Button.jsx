@@ -1,10 +1,5 @@
 import React from 'react';
-function cn(...inputs) {
-  return inputs
-    .flat()
-    .filter(Boolean)
-    .join(' ');
-}
+import clsx from 'clsx';
 
 const Button = React.forwardRef(({ 
   className, 
@@ -36,7 +31,7 @@ const Button = React.forwardRef(({
 
   return (
     <button
-      className={cn(
+      className={clsx(
         baseClasses,
         variantClasses[variant],
         sizeClasses[size],

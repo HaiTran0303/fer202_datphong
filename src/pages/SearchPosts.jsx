@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom'; // Import useLocation
 import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
+import axios from 'axios';
 import { 
   MapPin, 
   DollarSign, 
@@ -10,96 +11,13 @@ import {
   Star,
   Heart,
   Eye,
-  Wifi,
-  Car,
-  Coffee,
-  Tv,
-  Snowflake,
-  Shirt,
-  CheckCircle,
-  Home,
   Search
 } from 'lucide-react';
 
-
-// Mock data storage for postsService fallback (copied from firebase.js)
-let mockPostsStorage = [
-  {
-    id: 'mock1',
-    title: 'Tìm bạn nữ ghép trọ quận 1',
-    description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
-    price: 3500000,
-    budget: 3500000,
-    location: 'Quận 1, Hồ Chí Minh',
-    district: 'Quận 1',
-    city: 'Hồ Chí Minh',
-    roomType: 'double',
-    gender: 'female',
-    genderPreference: 'female',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'demo-user-123', // Demo user's posts
-    authorName: 'Demo User',
-    authorPhone: '0901234567',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  },
-  {
-    id: 'mock2',
-    title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
-    description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
-    price: 2800000,
-    budget: 2800000,
-    location: 'Quận 3, Hồ Chí Minh',
-    district: 'Quận 3',
-    city: 'Hồ Chí Minh',
-    roomType: 'apartment',
-    gender: 'male',
-    genderPreference: 'male',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'other-user-456', // Other user's posts
-    authorName: 'Việt Nam',
-    authorPhone: '0902345678',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  },
-  {
-    id: 'mock3',
-    title: 'Demo Post - Tìm bạn ghép trọ quận Bình Thạnh',
-    description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
-    price: 3200000,
-    budget: 3200000,
-    location: 'Quận Bình Thạnh, Hồ Chí Minh',
-    district: 'Quận Bình Thạnh',
-    city: 'Hồ Chí Minh',
-    roomType: 'single',
-    gender: 'female',
-    genderPreference: 'female',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'demo-user-123', // Demo user's posts
-    authorName: 'Demo User',
-    authorPhone: '0903456789',
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  }
-];
-
-const getMockPosts = (options = {}) => {
-  return {
-    posts: mockPostsStorage,
-    totalPages: 1,
-    total: mockPostsStorage.length,
-    currentPage: options.page || 1,
-    hasMore: false
-  };
-};
+const API_BASE_URL = 'http://localhost:3001';
 
 function SearchPosts() {
+  const location = useLocation(); // Initialize useLocation
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({});
   const [sortBy, setSortBy] = useState('newest');
@@ -112,31 +30,77 @@ function SearchPosts() {
   const postsPerPage = 9;
 
   useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const q = queryParams.get('q');
+    if (q) {
+      setSearchTerm(q);
+    }
     fetchPosts();
-  }, [searchTerm, filters, sortBy, currentPage]);
+  }, [searchTerm, filters, sortBy, currentPage, location.search]); // Add location.search to dependencies
 
   const fetchPosts = async () => {
     setLoading(true);
     
+    let queryParams = { // Define queryParams outside try block
+      _page: currentPage,
+      _limit: postsPerPage,
+    };
+
     try {
-      // Prepare search filters for Firebase
-      const searchFilters = {
-        search: searchTerm,
-        ...filters,
-        sortBy: sortBy,
-        page: currentPage,
-        limit: postsPerPage
-      };
+      // Use searchTerm from state, which might be initialized from URL query param
+      // Using title_like for specific title search as requested
+      if (searchTerm.trim()) {
+        queryParams.title_like = searchTerm.trim();
+      }
+      if (filters.district) {
+        queryParams.district = filters.district;
+      }
+      if (filters.category) {
+        queryParams.category = filters.category;
+      }
 
-      console.log('Searching posts with filters:', searchFilters);
+      if (filters.priceMin !== undefined) {
+        queryParams.price_gte = filters.priceMin;
+      }
+      if (filters.priceMax !== undefined) {
+        queryParams.price_lte = filters.priceMax;
+      }
 
-      // Use mock data directly
-      const result = getMockPosts(searchFilters);
-      
-      setPosts(result.posts || []);
-      setTotalPosts(result.total || result.posts?.length || 0);
+      if (filters.areaMin !== undefined) {
+        queryParams.area_gte = filters.areaMin;
+      }
+      if (filters.areaMax !== undefined) {
+        queryParams.area_lte = filters.areaMax;
+      }
+
+      if (sortBy === 'newest' || sortBy === 'createdAt') {
+        queryParams._sort = 'createdAt';
+        queryParams._order = 'desc';
+      } else if (sortBy === 'price') {
+        queryParams._sort = 'price';
+        queryParams._order = 'asc';
+      } else if (sortBy === 'priceDesc') {
+        queryParams._sort = 'price';
+        queryParams._order = 'desc';
+      }
+
+      console.log('Fetching posts with query:', queryParams); // Log the query for debugging
+      const response = await axios.get(`${API_BASE_URL}/posts`, { params: queryParams });
+      const totalCount = parseInt(response.headers['x-total-count'], 10);
+
+      let fetchedPosts = response.data;
+
+      if (filters.amenities && filters.amenities.length > 0) {
+        fetchedPosts = fetchedPosts.filter(post =>
+          filters.amenities.every(amenity => post.amenities?.includes(amenity))
+        );
+      }
+
+      setPosts(fetchedPosts);
+      setTotalPosts(totalCount);
     } catch (error) {
       console.error('Error fetching posts:', error);
+      console.log('Query parameters sent:', queryParams); // Log query parameters for debugging
       setPosts([]);
       setTotalPosts(0);
     } finally {
@@ -411,32 +375,4 @@ function SearchPosts() {
   );
 }
 
-export default SearchPosts; <environment_details>
-# VSCode Visible Files
-src/pages/SearchPosts.jsx
-
-# VSCode Open Tabs
-src/utils/constants.js
-src/pages/CreatePost.jsx
-src/pages/EditPost.jsx
-src/pages/Home.jsx
-src/pages/PostDetail.jsx
-src/pages/MyPosts.jsx
-src/pages/SearchPosts.jsx
-src/components/SearchFilter.jsx
-src/utils/firebase.js
-src/components/NotificationDropdown.jsx
-src/pages/Connections.jsx
-src/pages/MyConnections.jsx
-src/components/ConnectionModal.jsx
-src/App.jsx
-
-# Current Time
-7/15/2025, 12:47:33 AM (Asia/Bangkok, UTC+7:00)
-
-# Context Window Usage
-676,374 / 1,048.576K tokens used (65%)
-
-# Current Mode
-ACT MODE
-</environment_details>
+export default SearchPosts;

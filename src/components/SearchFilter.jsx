@@ -1,8 +1,55 @@
 import { useState } from 'react';
 import { Search, Filter, X, MapPin, DollarSign, Home } from 'lucide-react';
-import { LOCATIONS, CATEGORIES, PRICE_RANGES, AREA_RANGES, AMENITIES_LIST } from '../utils/constants';
-
 function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
+  const LOCATIONS = [
+    "Hồ Chí Minh",
+    "Hà Nội",
+    "Đà Nẵng",
+    "Cần Thơ",
+    "Quy Nhơn"
+  ];
+
+  const CATEGORIES = [
+    "Phòng trọ",
+    "Nhà nguyên căn",
+    "Căn hộ chung cư",
+    "Căn hộ mini",
+    "Căn hộ dịch vụ",
+    "Ở ghép",
+    "Mặt bằng"
+  ];
+
+  const PRICE_RANGES = [
+    { label: "Dưới 1 triệu", min: 0, max: 1000000 },
+    { label: "Từ 1 - 2 triệu", min: 1000000, max: 2000000 },
+    { label: "Từ 2 - 3 triệu", min: 2000000, max: 3000000 },
+    { label: "Từ 3 - 5 triệu", min: 3000000, max: 5000000 },
+    { label: "Từ 5 - 7 triệu", min: 5000000, max: 7000000 },
+    { label: "Trên 7 triệu", min: 7000000, max: 1.7976931348623157e+308 }
+  ];
+
+  const AREA_RANGES = [
+    { label: "Dưới 20 m²", min: 0, max: 20 },
+    { label: "Từ 20 - 30m²", min: 20, max: 30 },
+    { label: "Từ 30 - 50m²", min: 30, max: 50 },
+    { label: "Trên 50m²", min: 50, max: 1.7976931348623157e+308 }
+  ];
+
+  const AMENITIES_LIST = [
+    "Máy lạnh",
+    "Wifi",
+    "Giường",
+    "Tủ quần áo",
+    "Bàn học",
+    "Tủ lạnh",
+    "Máy giặt",
+    "Bếp",
+    "Ban công",
+    "Thang máy",
+    "Sân vườn",
+    "Bãi đậu xe",
+    "An ninh 24/7"
+  ];
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -15,14 +62,6 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   });
 
   const [tempFilters, setTempFilters] = useState(filters);
-
-  // Handle search
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (onSearch && searchTerm.trim()) {
-      onSearch(searchTerm.trim());
-    }
-  };
 
   // Handle filter changes
   const handleFilterChange = (key, value) => {
@@ -111,20 +150,26 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   return (
     <div className="bg-white shadow-sm rounded-lg p-4 mb-6">
       {/* Search Bar */}
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
             placeholder="Tìm kiếm phòng trọ, địa chỉ, tiện ích..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (onSearch) {
+                onSearch(e.target.value);
+              }
+            }}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <button
-          type="submit"
+          type="button"
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => onSearch(searchTerm)} // Still allow explicit search on button click
         >
           Tìm kiếm
         </button>
@@ -143,7 +188,7 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
             </span>
           )}
         </button>
-      </form>
+      </div>
 
       {/* Active Filters Display */}
       {activeFiltersCount > 0 && (
@@ -250,7 +295,7 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Bộ lọc nâng cao</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 border rounded-lg p-4 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-4 border rounded-lg p-4 bg-gray-50">
             {/* Location Filter */}
             <div className="flex flex-col">
               <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố</label>

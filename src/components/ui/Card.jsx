@@ -1,11 +1,5 @@
 import { forwardRef } from 'react';
-
-function cn(...inputs) {
-  return inputs
-    .flat()
-    .filter(Boolean)
-    .join(' ');
-}
+import clsx from 'clsx';
 
 const Card = forwardRef(({
   className,
@@ -39,7 +33,7 @@ const Card = forwardRef(({
   return (
     <div
       ref={ref}
-      className={cn(
+      className={clsx(
         baseStyles,
         variants[variant],
         sizes[size],
@@ -59,7 +53,7 @@ Card.displayName = "Card";
 const CardHeader = forwardRef(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 pb-4", className)}
+    className={clsx("flex flex-col space-y-1.5 pb-4", className)}
     {...props}
   >
     {children}
@@ -70,7 +64,7 @@ CardHeader.displayName = "CardHeader";
 const CardTitle = forwardRef(({ className, children, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-lg font-semibold leading-none tracking-tight text-secondary-900", className)}
+    className={clsx("text-lg font-semibold leading-none tracking-tight text-secondary-900", className)}
     {...props}
   >
     {children}
@@ -81,7 +75,7 @@ CardTitle.displayName = "CardTitle";
 const CardDescription = forwardRef(({ className, children, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-secondary-600 line-clamp-2", className)}
+    className={clsx("text-sm text-secondary-600 line-clamp-2", className)}
     {...props}
   >
     {children}
@@ -92,7 +86,7 @@ CardDescription.displayName = "CardDescription";
 const CardContent = forwardRef(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("pt-0", className)}
+    className={clsx("pt-0", className)}
     {...props}
   >
     {children}
@@ -103,7 +97,7 @@ CardContent.displayName = "CardContent";
 const CardFooter = forwardRef(({ className, children, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center pt-4", className)}
+    className={clsx("flex items-center pt-4", className)}
     {...props}
   >
     {children}

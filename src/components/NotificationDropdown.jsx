@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, X, UserPlus, MessageCircle, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import clsx from 'clsx';
 // Mock user data for notifications
 const mockUsers = [
   { uid: 'fake-uid-123', fullName: 'Demo User', avatar: 'https://via.placeholder.com/48' },
@@ -238,9 +239,10 @@ function NotificationDropdown() {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors ${
-                      !notification.isRead ? 'bg-blue-50' : ''
-                    }`}
+                    className={clsx(
+                      "p-4 hover:bg-gray-50 transition-colors",
+                      !notification.isRead && "bg-blue-50"
+                    )}
                   >
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 mt-1">
