@@ -24,6 +24,7 @@
       ],
       "utilities": [
         "Điện",
+
         "Nước",
         "Internet"
       ],
@@ -39,7 +40,8 @@
       "rating": 5,
       "views": 245,
       "likes": 12,
-      "id": "1"
+      "id": "1",
+      "type": "room_listing"
     },
     {
       "title": "Cho thuê phòng trọ có ban công, máy lạnh, thang máy giá 2.5 - 2.7tr tại P15, Q Tân Bình",
@@ -78,7 +80,8 @@
       "rating": 5,
       "views": 189,
       "likes": 8,
-      "id": "2"
+      "id": "2",
+      "type": "room_listing"
     },
     {
       "title": "CHO THUÊ PHÒNG TRỌ MỚI CHÍNH CHỦ, GIẢM GIÁ, QUẬN TÂN PHÚ - GẦN BÊN TRƯỜNG ĐH CÔNG NGHỆ THỰC PHẨM",
@@ -118,7 +121,8 @@
       "rating": 4,
       "views": 156,
       "likes": 6,
-      "id": "3"
+      "id": "3",
+      "type": "room_listing"
     },
     {
       "title": "CĂN HỘ DUPLEX CỬA SỔ THOÁNG - FULL NỘI THẤT P.TÂN HƯNG Q.7 GẦN CRESENT MALL, LOTTE, RMIT, TDTU, Q1-4",
@@ -163,7 +167,8 @@
       "rating": 5,
       "views": 312,
       "likes": 18,
-      "id": "4"
+      "id": "4",
+      "type": "room_listing"
     },
     {
       "title": "Duplex bancon siêu đẹp 30m2 - 656 Quang Trung F11 Gò Vấp",
@@ -204,7 +209,8 @@
       "rating": 4,
       "views": 198,
       "likes": 9,
-      "id": "5"
+      "id": "5",
+      "type": "room_listing"
     },
     {
       "title": "Phòng trọ Hà Nội - Gần Đại học Bách Khoa, giá tốt sinh viên",
@@ -241,7 +247,8 @@
       "rating": 4,
       "views": 123,
       "likes": 5,
-      "id": "6"
+      "id": "6",
+      "type": "room_listing"
     },
     {
       "title": "Nhà nguyên căn 2 tầng Đà Nẵng - Gần biển, full nội thất",
@@ -287,7 +294,8 @@
       "rating": 5,
       "views": 456,
       "likes": 23,
-      "id": "7"
+      "id": "7",
+      "type": "room_listing"
     },
     {
       "title": "Mặt bằng kinh doanh trung tâm Cần Thơ - Vị trí đẹp",
@@ -324,13 +332,15 @@
       "rating": 4,
       "views": 234,
       "likes": 11,
-      "id": "8"
+      "id": "8",
+      "type": "room_listing"
     },
     {
       "id": "89dd",
       "title": "tesst",
       "description": "aaaaaaaaaaaaaa",
       "budget": 390000000,
+      "type": "roommate_finding",
       "location": "Hà Nội",
       "district": "Sơn Tây",
       "roomType": "double",
@@ -362,6 +372,7 @@
       "title": "a",
       "description": "aaaaaaaaaaaaa",
       "budget": 30000000000,
+      "type": "roommate_finding",
       "location": "Hà Nội",
       "district": "Bắc Từ Liêm",
       "roomType": "double",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from '../components/ui/Modal';
 import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -33,7 +33,8 @@ const PostManagement = () => {
     likes: 0
   });
 
-  const navigate = useNavigate(); // Initialize useNavigate
+  const [showModal, setShowModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
     fetchPosts();
@@ -130,8 +131,14 @@ const PostManagement = () => {
     }
   };
 
-  const handleViewDetails = (postId) => {
-    navigate(`/post-detail/${postId}`);
+  const handleViewDetails = (post) => {
+    setSelectedPost(post);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedPost(null);
   };
 
   return (
@@ -264,7 +271,7 @@ const PostManagement = () => {
                     <Button onClick={() => handleDeletePost(post.id)} class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Xóa
                     </Button>
-                    <Button onClick={() => handleViewDetails(post.id)} class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleViewDetails(post)} class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Xem chi tiết
                     </Button>
                   </div>
@@ -274,6 +281,53 @@ const PostManagement = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Post Detail Modal */}
+      {selectedPost && (
+        <Modal isOpen={showModal} onClose={closeModal} size="lg">
+          <ModalHeader onClose={closeModal}>
+            <ModalTitle>Chi tiết bài đăng: {selectedPost.title}</ModalTitle>
+          </ModalHeader>
+          <ModalContent>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p><strong>ID:</strong> {selectedPost.id}</p>
+                <p><strong>Mô tả:</strong> {selectedPost.description}</p>
+                <p><strong>Giá:</strong> {selectedPost.price} VNĐ</p>
+                <p><strong>Diện tích:</strong> {selectedPost.area} m²</p>
+                <p><strong>Địa điểm:</strong> {selectedPost.location}</p>
+                <p><strong>Quận/Huyện:</strong> {selectedPost.district}</p>
+                <p><strong>Danh mục:</strong> {selectedPost.category}</p>
+                <p><strong>Tiền đặt cọc:</strong> {selectedPost.deposit} VNĐ</p>
+                <p><strong>ID người dùng:</strong> {selectedPost.userId}</p>
+                <p><strong>Nổi bật:</strong> {selectedPost.featured ? 'Có' : 'Không'}</p>
+                <p><strong>Đánh giá:</strong> {selectedPost.rating}</p>
+                <p><strong>Lượt xem:</strong> {selectedPost.views}</p>
+                <p><strong>Lượt thích:</strong> {selectedPost.likes}</p>
+              </div>
+              <div>
+                <p><strong>Tên liên hệ:</strong> {selectedPost.contact.name}</p>
+                <p><strong>Số điện thoại:</strong> {selectedPost.contact.phone}</p>
+                <p><strong>Email liên hệ:</strong> {selectedPost.contact.email}</p>
+                <p><strong>Địa chỉ:</strong> {selectedPost.address}</p>
+                <p><strong>Hình ảnh:</strong></p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedPost.images.map((img, index) => (
+                    <img key={index} src={img} alt={`Post image ${index + 1}`} className="w-24 h-24 object-cover rounded-md" />
+                  ))}
+                </div>
+                <p className="mt-2"><strong>Tiện nghi:</strong> {selectedPost.amenities.join(', ')}</p>
+                <p><strong>Chi phí khác:</strong> {selectedPost.utilities.join(', ')}</p>
+              </div>
+            </div>
+          </ModalContent>
+          <ModalFooter>
+            <Button onClick={closeModal} class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+              Đóng
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
     </div>
   );
 };

@@ -1,12 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import ConnectionModal from '../components/ConnectionModal';
 import { 
   MapPin, 
   DollarSign, 
-  Users, 
-  Calendar, 
-  Star,
   Heart,
   Eye,
   Share2,
@@ -18,7 +16,6 @@ import {
   Wifi,
   Car,
   Coffee,
-  Tv,
   Snowflake,
   Shirt,
   ChevronLeft,
@@ -27,84 +24,17 @@ import {
   UserPlus
 } from 'lucide-react';
 
-// Mock data storage for postsService fallback (copied from firebase.js)
-
-// Mock data storage for postsService fallback (copied from firebase.js)
-let mockPostsStorage = [
-  {
-    id: 'mock1',
-    title: 'Tìm bạn nữ ghép trọ quận 1',
-    description: 'Phòng trọ đẹp, đầy đủ tiện nghi, gần trường ĐH Khoa học Tự nhiên.',
-    price: 3500000,
-    budget: 3500000,
-    location: 'Quận 1, Hồ Chí Minh',
-    district: 'Quận 1',
-    city: 'Hồ Chí Minh',
-    roomType: 'double',
-    gender: 'female',
-    genderPreference: 'female',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'demo-user-123', // Demo user's posts
-    authorName: 'Demo User',
-    authorPhone: '0901234567',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  },
-  {
-    id: 'mock2',
-    title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa',
-    description: 'Căn hộ mini 2 phòng ngủ, đầy đủ nội thất, gần trường học.',
-    price: 2800000,
-    budget: 2800000,
-    location: 'Quận 3, Hồ Chí Minh',
-    district: 'Quận 3',
-    city: 'Hồ Chí Minh',
-    roomType: 'apartment',
-    gender: 'male',
-    genderPreference: 'male',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'other-user-456', // Other user's posts
-    authorName: 'Việt Nam',
-    authorPhone: '0902345678',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  },
-  {
-    id: 'mock3',
-    title: 'Demo Post - Tìm bạn ghép trọ quận Bình Thạnh',
-    description: 'Phòng trọ yên tĩnh, an ninh tốt, phù hợp sinh viên nghiêm túc.',
-    price: 3200000,
-    budget: 3200000,
-    location: 'Quận Bình Thạnh, Hồ Chí Minh',
-    district: 'Quận Bình Thạnh',
-    city: 'Hồ Chí Minh',
-    roomType: 'single',
-    gender: 'female',
-    genderPreference: 'female',
-    type: 'roommate-search',
-    status: 'active',
-    authorId: 'demo-user-123', // Demo user's posts
-    authorName: 'Demo User',
-    authorPhone: '0903456789',
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-    updatedAt: new Date().toISOString(),
-    images: ['/api/placeholder/400/300']
-  }
-];
+const API_BASE_URL = 'http://localhost:3001';
 
 function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // Mock current user for demo purposes
   const currentUser = {
-    uid: 'demo-user-id',
-    email: 'demo@example.com',
-    displayName: 'Demo User'
+    uid: 'demo-user-id', // This ID should match an ID in your db.json users array
+    email: 'demo@test.com',
+    displayName: 'Demo User',
+    id: 'user1' // Ensure this ID matches a user in db.json for currentUser checks
   };
 
   const [post, setPost] = useState(null);
@@ -116,27 +46,39 @@ function PostDetail() {
   const [contactMessage, setContactMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
+  const [authorInfo, setAuthorInfo] = useState(null);
 
-  const amenitiesLabels = {
-    wifi: 'WiFi',
-    parking: 'Chỗ đậu xe',
-    kitchen: 'Nhà bếp',
-    tv: 'TV',
-    ac: 'Điều hòa',
-    washing: 'Máy giặt',
-    security: 'Bảo vệ 24/7',
-    elevator: 'Thang máy'
+  // Helper to map amenities for display for room_listing posts
+  const roomListingAmenitiesLabels = {
+    "Máy lạnh": 'Máy lạnh',
+    "Wifi": 'Wifi',
+    "Giường": 'Giường',
+    "Tủ quần áo": 'Tủ quần áo',
+    "Bàn học": 'Bàn học',
+    "Tủ lạnh": 'Tủ lạnh',
+    "Máy giặt": 'Máy giặt',
+    "Bếp": 'Bếp',
+    "Ban công": 'Ban công',
+    "Thang máy": 'Thang máy',
+    "Sân vườn": 'Sân vườn',
+    "Bãi đậu xe": 'Bãi đậu xe',
+    "An ninh 24/7": 'An ninh 24/7'
   };
 
-  const amenitiesIcons = {
-    wifi: <Wifi size={16} />,
-    parking: <Car size={16} />,
-    kitchen: <Coffee size={16} />,
-    tv: <Tv size={16} />,
-    ac: <Snowflake size={16} />,
-    washing: <Shirt size={16} />,
-    security: <CheckCircle size={16} />,
-    elevator: <Home size={16} />
+  const roomListingAmenitiesIcons = {
+    "Máy lạnh": <Snowflake size={16} />,
+    "Wifi": <Wifi size={16} />,
+    "Giường": <Home size={16} />, // Generic home icon for furniture
+    "Tủ quần áo": <Shirt size={16} />,
+    "Bàn học": <Home size={16} />, // Generic home icon for furniture
+    "Tủ lạnh": <Home size={16} />, // Generic home icon for appliance
+    "Máy giặt": <Home size={16} />, // Generic home icon for appliance
+    "Bếp": <Coffee size={16} />,
+    "Ban công": <Home size={16} />, // Generic home icon
+    "Thang máy": <Home size={16} />, // Generic home icon
+    "Sân vườn": <Home size={16} />, // Generic home icon
+    "Bãi đậu xe": <Car size={16} />,
+    "An ninh 24/7": <CheckCircle size={16} />
   };
 
   useEffect(() => {
@@ -145,32 +87,38 @@ function PostDetail() {
 
   const fetchPost = async () => {
     setLoading(true);
-    
     try {
       if (!id) {
         navigate('/');
         return;
       }
       
-      // getPostById function (moved from firebase.js)
-      const getPostById = async (postId) => {
-        // Simulate fetching post data from mock storage
-        const post = mockPostsStorage.find(p => p.id === postId);
-        return post || null; 
-      };
-
-      // Get post from mock data
-      const postData = await getPostById(id);
+      const response = await axios.get(`${API_BASE_URL}/posts/${id}`);
+      const postData = response.data;
+      console.log('Fetched post data:', postData); // Add this line for debugging
       
       if (!postData) {
         console.error('Post not found');
         navigate('/');
         return;
       }
-      
+
       setPost(postData);
+      console.log('Post type:', postData.type);
+      console.log('Post price:', postData.price);
+      console.log('Post budget:', postData.budget);
+      console.log('Post images:', postData.images);
+      console.log('Post description:', postData.description);
+      console.log('Post location:', postData.location);
+
+
+      if (postData.userId) {
+        const authorResponse = await axios.get(`${API_BASE_URL}/users/${postData.userId}`);
+        setAuthorInfo(authorResponse.data);
+      }
+      
     } catch (error) {
-      console.error('Error fetching post:', error);
+      console.error('Error fetching post or author:', error);
       navigate('/');
     } finally {
       setLoading(false);
@@ -182,14 +130,13 @@ function PostDetail() {
       try {
         await navigator.share({
           title: post.title,
-          text: `${post.title} - ${formatPrice(post.budget || post.price)}`,
+          text: `${post.title} - ${post.type === 'room_listing' ? formatPrice(post.price) : formatPrice(post.budget)}`,
           url: window.location.href
         });
       } catch (error) {
         console.log('Error sharing:', error);
       }
     } else {
-      // Fallback - copy to clipboard
       navigator.clipboard.writeText(window.location.href);
       alert('Đã copy link bài đăng!');
     }
@@ -201,7 +148,7 @@ function PostDetail() {
       return;
     }
     
-    if (currentUser?.uid === post.author?.id) {
+    if (currentUser?.uid === authorInfo?.id) { 
       alert('Đây là bài đăng của bạn!');
       return;
     }
@@ -214,10 +161,9 @@ function PostDetail() {
     
     setSendingMessage(true);
     
-    // Simulate sending message
     setTimeout(() => {
       console.log('Sending message:', {
-        to: post.author?.id,
+        to: authorInfo?.id, 
         message: contactMessage,
         postId: post.id
       });
@@ -237,33 +183,17 @@ function PostDetail() {
     if (price === undefined || price === null) {
       return 'N/A';
     }
-    if (price >= 1000000) {
+    if (price >= 1000000000) { // For budget (tỷ)
+      return `${(price / 1000000000).toFixed(1)} tỷ`;
+    }
+    if (price >= 1000000) { // For price (triệu)
       return `${(price / 1000000).toFixed(1)} triệu`;
     }
-    return `${price.toLocaleString()} đồng`;
+    return `${price.toLocaleString()} đồng`; // For price (đồng)
   };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('vi-VN');
-  };
-
-  const getRoomTypeLabel = (roomType) => {
-    const types = {
-      'single': 'Phòng đơn',
-      'double': 'Phòng đôi',
-      'dorm': 'Phòng tập thể',
-      'studio': 'Studio',
-      'apartment': 'Căn hộ'
-    };
-    return types[roomType] || roomType;
-  };
-
-  const getGenderLabel = (gender) => {
-    const genders = {
-      'male': 'Nam',
-      'female': 'Nữ'
-    };
-    return genders[gender] || 'Không quan trọng';
   };
 
   const nextImage = () => {
@@ -304,10 +234,10 @@ function PostDetail() {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Không tìm thấy bài đăng</h2>
         <p className="text-gray-600 mb-4">Bài đăng có thể đã được xóa hoặc không tồn tại.</p>
         <button
-          onClick={() => navigate('/search')}
+          onClick={() => navigate('/')} 
           className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
         >
-          Quay lại tìm kiếm
+          Quay lại trang chủ
         </button>
       </div>
     );
@@ -353,49 +283,55 @@ function PostDetail() {
 
       {/* Image Gallery */}
       <div className="mb-8">
-        <div className="relative">
-          <img
-            src={post.images[currentImageIndex]}
-            alt={post.title}
-            className="w-full h-96 object-cover rounded-lg cursor-pointer"
-            onClick={() => setShowImageModal(true)}
-          />
-          
-          {post.images.length > 1 && (
-            <>
-              <button
-                onClick={prevImage}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
-                tabIndex="0"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              
-              <button
-                onClick={nextImage}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
-                tabIndex="0"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </>
-          )}
-          
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {post.images.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentImageIndex(index)}
-                className={`w-3 h-3 rounded-full ${
-                  index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                }`}
-                tabIndex="0"
-              />
-            ))}
+        {post.images && post.images.length > 0 ? (
+          <div className="relative">
+            <img
+              src={post.images[currentImageIndex]}
+              alt={post.title}
+              className="w-full h-96 object-cover rounded-lg cursor-pointer"
+              onClick={() => setShowImageModal(true)}
+            />
+            
+            {post.images.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                  tabIndex="0"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                
+                <button
+                  onClick={nextImage}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70"
+                  tabIndex="0"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </>
+            )}
+            
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+              {post.images.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentImageIndex(index)}
+                  className={`w-3 h-3 rounded-full ${
+                    index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                  }`}
+                  tabIndex="0"
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-full h-96 flex items-center justify-center bg-gray-200 rounded-lg text-gray-500">
+            Không có hình ảnh
+          </div>
+        )}
         
-        {post.images.length > 1 && (
+        {post.images && post.images.length > 1 && (
           <div className="flex space-x-2 mt-4 overflow-x-auto">
             {post.images.map((image, index) => (
               <img
@@ -420,21 +356,36 @@ function PostDetail() {
             <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
             
             <div className="flex items-center space-x-6 mb-6">
-              <div className="flex items-center text-blue-600">
-                <DollarSign size={20} className="mr-1" />
-                <span className="text-2xl font-bold">{formatPrice(post.budget || post.price)}/tháng</span>
-              </div>
-              
-              <div className="flex items-center text-gray-600">
-                <MapPin size={16} className="mr-1" />
-                <span>{post.district}, {post.city}</span>
-              </div>
-              
-              <div className="flex items-center text-gray-600">
-                <Home size={16} className="mr-1" />
-                <span>{getRoomTypeLabel(post.roomType)}</span>
-              </div>
-
+              {post.type === 'room_listing' && (
+                <>
+                  <div className="flex items-center text-blue-600">
+                    <DollarSign size={20} className="mr-1" />
+                    <span className="text-2xl font-bold">{formatPrice(post.price)}/tháng</span>
+                  </div>
+                  
+                  <div className="flex items-center text-gray-600">
+                    <MapPin size={16} className="mr-1" />
+                    <span>{post.district}, {post.location}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-gray-600">
+                    <Home size={16} className="mr-1" />
+                    <span>{post.category}</span>
+                  </div>
+                </>
+              )}
+              {post.type === 'roommate_finding' && (
+                <>
+                  <div className="flex items-center text-blue-600">
+                    <DollarSign size={20} className="mr-1" />
+                    <span className="text-2xl font-bold">{formatPrice(post.budget)}</span>
+                  </div>
+                  <div className="flex items-center text-gray-600">
+                    <MapPin size={16} className="mr-1" />
+                    <span>{post.district}, {post.location}</span>
+                  </div>
+                </>
+              )}
             </div>
             
             <div className="prose max-w-none mb-6">
@@ -442,87 +393,107 @@ function PostDetail() {
               <p className="text-gray-700 leading-relaxed">{post.description}</p>
             </div>
             
-            {/* Property Details */}
+            {/* Property Details / Roommate Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Thông tin phòng</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Địa chỉ:</span>
-                    <span className="font-medium">{post.location}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Diện tích:</span>
-                    <span className="font-medium">{post.additionalInfo?.area || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tầng:</span>
-                    <span className="font-medium">{post.additionalInfo?.floor || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tiền cọc:</span>
-                    <span className="font-medium">{formatPrice(post.additionalInfo?.deposit || 0)}</span>
+              {post.type === 'room_listing' && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Thông tin phòng</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Địa chỉ:</span>
+                      <span className="font-medium">{post.address || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Diện tích:</span>
+                      <span className="font-medium">{post.area || 'N/A'} m²</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tiền cọc:</span>
+                      <span className="font-medium">{formatPrice(post.deposit)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-3">Yêu cầu</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Giới tính:</span>
-                    <span className="font-medium">{getGenderLabel(post.gender)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Số người:</span>
-                    <span className="font-medium">{post.maxPeople} người</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Có thể vào:</span>
-                    <span className="font-medium">{formatDate(post.availableFrom)}</span>
+              )}
+              {post.type === 'roommate_finding' && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Thông tin tìm bạn ghép</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Loại phòng:</span>
+                      <span className="font-medium">{post.roomType || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Giới tính mong muốn:</span>
+                      <span className="font-medium">{post.genderPreference || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Trường:</span>
+                      <span className="font-medium">{post.school || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Ngành:</span>
+                      <span className="font-medium">{post.major || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Năm học:</span>
+                      <span className="font-medium">{post.year || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Có thể vào ở từ:</span>
+                      <span className="font-medium">{formatDate(post.availableFrom) || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
             
-            {/* Amenities */}
+            {/* Amenities / Interests & Lifestyle */}
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Tiện ích</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {post.amenities?.map(amenity => (
-                  <div key={amenity} className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
-                    {amenitiesIcons[amenity]}
-                    <span className="text-sm">{amenitiesLabels[amenity]}</span>
+              {post.type === 'room_listing' && (
+                <>
+                  <h3 className="text-lg font-semibold mb-3">Tiện ích</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {post.amenities?.map(amenity => (
+                      <div key={amenity} className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
+                        {roomListingAmenitiesIcons[amenity]}
+                        <span className="text-sm">{roomListingAmenitiesLabels[amenity]}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
+              {post.type === 'roommate_finding' && (
+                <>
+                  <h3 className="text-lg font-semibold mb-3">Sở thích & Lối sống</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-1">Sở thích:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {post.interests?.map(interest => (
+                          <span key={interest} className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">
+                            {interest}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-gray-700 mb-1">Lối sống:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {post.lifestyle?.map(item => (
+                          <span key={item} className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
+                            {item}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             
-            {/* Rules */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3">Quy tắc chung</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {post.rules?.map((rule, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <CheckCircle size={16} className="text-green-500" />
-                    <span className="text-sm">{rule}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Rules (Removed as not in db.json) */}
             
-            {/* Nearby Places */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Địa điểm lân cận</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {post.additionalInfo?.nearby?.map((place, index) => (
-                  <div key={index} className="flex items-center space-x-2">
-                    <MapPin size={16} className="text-gray-400" />
-                    <span className="text-sm">{place}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Nearby Places (Removed as not in db.json) */}
           </div>
         </div>
         
@@ -532,19 +503,19 @@ function PostDetail() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <div className="flex items-center space-x-4 mb-4">
               <img
-                src={post.author?.avatar || '/default-avatar.png'}
-                alt={post.author?.name || 'Người dùng'}
+                src={authorInfo?.avatar || '/default-avatar.png'}
+                alt={authorInfo?.fullName || 'Người dùng'}
                 className="w-12 h-12 rounded-full"
               />
               <div>
                 <h3 className="font-semibold text-gray-900 flex items-center">
-                  {post.author?.name || 'Người dùng ẩn danh'}
-                  {post.author?.verified && (
+                  {authorInfo?.fullName || 'Người dùng ẩn danh'}
+                  {authorInfo?.verified && (
                     <CheckCircle size={16} className="ml-1 text-green-500" />
                   )}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Tham gia từ {formatDate(post.author?.joinDate || new Date())}
+                  Tham gia từ {formatDate(authorInfo?.createdAt || new Date())}
                 </p>
               </div>
             </div>
@@ -552,11 +523,11 @@ function PostDetail() {
             <div className="space-y-2 mb-4">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tỷ lệ phản hồi:</span>
-                <span className="font-medium">{post.author?.responseRate || 'N/A'}%</span>
+                <span className="font-medium">{authorInfo?.responseRate || 'N/A'}%</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Thời gian phản hồi:</span>
-                <span className="font-medium">{post.author?.responseTime || 'N/A'}</span>
+                <span className="font-medium">{authorInfo?.responseTime || 'N/A'}</span>
               </div>
             </div>
             
@@ -569,7 +540,7 @@ function PostDetail() {
                 <span>Gửi tin nhắn</span>
               </button>
               
-              {currentUser && currentUser.uid !== post.author?.id && (
+              {currentUser && currentUser.uid !== authorInfo?.id && (
                 <button
                   onClick={() => setShowConnectionModal(true)}
                   className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
@@ -580,7 +551,7 @@ function PostDetail() {
               )}
               
               <button
-                onClick={() => window.location.href = `tel:${post.author.phone}`}
+                onClick={() => window.location.href = `tel:${authorInfo.phone}`}
                 className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
               >
                 <Phone size={20} />
@@ -658,7 +629,7 @@ function PostDetail() {
             
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tin nhắn cho {post.author?.name || 'Người dùng'}
+                Tin nhắn cho {authorInfo?.fullName || 'Người dùng'}
               </label>
               <textarea
                 value={contactMessage}
@@ -695,11 +666,11 @@ function PostDetail() {
           onClose={() => setShowConnectionModal(false)}
           post={post}
           targetUser={{
-            uid: post.authorId, // Đảm bảo luôn truyền authorId làm uid cho ConnectionModal
-            fullName: post.authorName || post.author?.name || '',
-            avatar: post.author?.avatar || '',
-            school: post.author?.school || '',
-            major: post.author?.major || ''
+            uid: authorInfo?.id, 
+            fullName: authorInfo?.fullName || '',
+            avatar: authorInfo?.avatar || '',
+            school: authorInfo?.school || '',
+            major: authorInfo?.major || ''
           }}
         />
       )}
