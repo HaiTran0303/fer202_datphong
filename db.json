@@ -333,106 +333,6 @@
       "likes": 11,
       "id": "8",
       "type": "room_listing"
-    },
-    {
-      "id": "89dd",
-      "title": "tesst",
-      "description": "aaaaaaaaaaaaaa",
-      "budget": 390000000,
-      "type": "roommate_finding",
-      "location": "Hà Nội",
-      "district": "Sơn Tây",
-      "roomType": "double",
-      "genderPreference": "female",
-      "myGender": "male",
-      "school": "Đại học FPT",
-      "major": "Công nghệ thông tin",
-      "year": "3",
-      "availableFrom": "2025-07-16",
-      "contactName": "Trần Hoàng Hải",
-      "contactPhone": "0972773693",
-      "interests": [
-        "Xem phim",
-        "Thể thao"
-      ],
-      "lifestyle": [
-        "Dậy sớm",
-        "Thích tiệc tùng"
-      ],
-      "images": [],
-      "createdAt": "2025-07-16T03:42:33.654Z",
-      "updatedAt": "2025-07-16T03:42:33.654Z",
-      "status": "active",
-      "views": 0,
-      "likes": 0
-    },
-    {
-      "id": "1f6f",
-      "title": "a",
-      "description": "aaaaaaaaaaaaa",
-      "budget": 30000000000,
-      "type": "roommate_finding",
-      "location": "Hà Nội",
-      "district": "Bắc Từ Liêm",
-      "roomType": "double",
-      "genderPreference": "female",
-      "myGender": "male",
-      "school": "Đại học FPT",
-      "major": "Công nghệ thông tin",
-      "year": "4",
-      "availableFrom": "2025-07-16",
-      "contactName": "aaaaaaaaaaa",
-      "contactPhone": "aaaaaaaaaaaaaaaaaaaa",
-      "interests": [
-        "Xem phim",
-        "Nấu ăn"
-      ],
-      "lifestyle": [
-        "Yên tĩnh"
-      ],
-      "images": [
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-      ],
-      "createdAt": "2025-07-16T04:32:37.068Z",
-      "updatedAt": "2025-07-16T04:32:37.069Z",
-      "status": "active",
-      "views": 0,
-      "likes": 0
-    },
-    {
-      "id": "7f73",
-      "title": "aaa",
-      "description": "aaaaaaa",
-      "budget": 30000000,
-      "location": "Hà Nội",
-      "district": "Thạch Thất",
-      "roomType": "double",
-      "genderPreference": "male",
-      "myGender": "male",
-      "school": "Đại học FPT",
-      "major": "Công nghệ thông tin",
-      "year": "4",
-      "availableFrom": "2025-07-17",
-      "contactName": "Trần Hoàng Hải",
-      "contactPhone": "0972773693",
-      "interests": [
-        "Xem phim",
-        "Nấu ăn",
-        "Yoga"
-      ],
-      "lifestyle": [
-        "Yên tĩnh",
-        "Dậy sớm",
-        "Học tập nhiều"
-      ],
-      "images": [
-        "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-      ],
-      "createdAt": "2025-07-16T04:51:48.250Z",
-      "updatedAt": "2025-07-16T04:51:48.250Z",
-      "status": "active",
-      "views": 0,
-      "likes": 0
     }
   ],
   "blogs": [
@@ -772,6 +672,16 @@
       "phone": "0972773693",
       "createdAt": "2025-07-17T11:45:55.735Z",
       "updatedAt": "2025-07-17T11:45:55.735Z",
+      "role": "user"
+    },
+    {
+      "id": "e3f3",
+      "email": "ccc@gmail.com",
+      "password": "123456",
+      "fullName": "Trần Hoàng Hải",
+      "phone": "0972773693",
+      "createdAt": "2025-07-17T11:56:34.995Z",
+      "updatedAt": "2025-07-17T11:56:34.995Z",
       "role": "user"
     }
   ],

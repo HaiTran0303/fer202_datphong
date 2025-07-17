@@ -97,14 +97,20 @@ function Register() {
         phone: formData.phone,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        role: 'user' // Automatically assign 'user' role
+        role: 'user', // Automatically assign 'user' role
+        isActive: true, // Assuming new users are active by default
+        creationTime: new Date().toISOString() // Add creation time
         // Add other default profile fields if necessary
       };
       
       await axios.post(`${API_BASE_URL}/users`, newUser);
       
-      alert('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigate('/login');
+      // Use error state for success message temporarily
+      setError('Đăng ký thành công! Vui lòng đăng nhập.'); 
+      setTimeout(() => { // Clear message and navigate after a short delay
+        setError('');
+        navigate('/login');
+      }, 2000); 
     } catch (err) {
       console.error('Registration error:', err);
       

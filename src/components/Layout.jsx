@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom'; // Removed useNavigate
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { User, LogOut, FileText, Settings, ChevronDown, UserPlus } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
+import { Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter } from './ui/Modal'; // Import Modal components
+import Button from './ui/Button'; // Assuming Button component exists
 
 const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added searchTermValue, onSearchSubmit props
   const location = useLocation();
@@ -9,6 +11,8 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [headerSearchTerm, setHeaderSearchTerm] = useState(searchTermValue || ''); // Initialize with prop
   const dropdownRef = useRef(null);
+  const navigate = useNavigate(); // Initialize useNavigate
+  const [showLoginModal, setShowLoginModal] = useState(false); // State for login modal
 
   useEffect(() => {
     setHeaderSearchTerm(searchTermValue || ''); // Update when prop changes
@@ -39,6 +43,23 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
     setShowUserDropdown(false);
     // Optionally redirect to login page
     // navigate('/login');
+  };
+
+  const handleClickCreatePost = () => {
+    if (!currentUser) {
+      setShowLoginModal(true); // Show modal instead of window.confirm
+    } else {
+      navigate('/create-post');
+    }
+  };
+
+  const handleConfirmLogin = () => {
+    setShowLoginModal(false);
+    navigate('/login');
+  };
+
+  const handleCancelLogin = () => {
+    setShowLoginModal(false);
   };
 
   return (
@@ -213,12 +234,12 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
                 </>
               )}
 
-              <Link 
-                to="/create-post" 
+              <button
+                onClick={handleClickCreatePost}
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
               >
                 Đăng tin miễn phí
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -310,6 +331,20 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
           </div>
         </div>
       </footer>
+
+      {/* Login Confirmation Modal */}
+      <Modal isOpen={showLoginModal} onClose={handleCancelLogin}>
+        <ModalHeader onClose={handleCancelLogin}>
+          <ModalTitle>Yêu cầu đăng nhập</ModalTitle>
+        </ModalHeader>
+        <ModalContent>
+          <p>Bạn cần đăng nhập để đăng tin mới. Bạn có muốn đăng nhập ngay bây giờ không?</p>
+        </ModalContent>
+        <ModalFooter>
+          <Button variant="secondary" onClick={handleCancelLogin}>Hủy</Button>
+          <Button onClick={handleConfirmLogin}>Đăng nhập</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };
