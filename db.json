@@ -641,7 +641,9 @@
       "verified": true,
       "responseRate": 90,
       "responseTime": "Trong 1 giờ",
-      "joinDate": "2023-01-01T00:00:00.000Z"
+      "joinDate": "2023-01-01T00:00:00.000Z",
+      "isActive": true,
+      "creationTime": "2023-01-01T00:00:00.000Z"
     },
     {
       "id": "user2",
@@ -677,7 +679,9 @@
       "verified": false,
       "responseRate": 85,
       "responseTime": "Trong 2 giờ",
-      "joinDate": "2023-02-15T00:00:00.000Z"
+      "joinDate": "2023-02-15T00:00:00.000Z",
+      "isActive": true,
+      "creationTime": "2023-02-15T00:00:00.000Z"
     },
     {
       "id": "74ad",
@@ -687,7 +691,18 @@
       "role": "user",
       "phone": "0972773693",
       "createdAt": "2025-07-16T03:40:57.759Z",
-      "updatedAt": "2025-07-16T03:40:57.759Z"
+      "updatedAt": "2025-07-16T03:40:57.759Z",
+      "isActive": true,
+      "creationTime": "2025-07-16T03:40:57.759Z"
+    },
+    {
+      "id": "4fe5",
+      "fullName": "Trần Hoàng Hải",
+      "email": "acc@gmail.com",
+      "password": "123456",
+      "role": "admin",
+      "isActive": true,
+      "creationTime": "2025-07-17T03:58:55.610Z"
     }
   ],
   "connections": [],

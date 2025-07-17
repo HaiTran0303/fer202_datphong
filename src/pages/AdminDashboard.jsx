@@ -1,19 +1,57 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import UserManagement from './UserManagement';
+import PostManagement from './PostManagement';
 
 const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('userManagement'); // 'userManagement' or 'postManagement'
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab);
+  };
+
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Bảng điều khiển Admin</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Link to="/admin/users" className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-2">Quản lý người dùng</h2>
-          <p className="text-gray-600">Thêm, sửa, xóa người dùng và quản lý vai trò của họ.</p>
-        </Link>
-        <Link to="/admin/posts" className="block p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-2">Quản lý bài đăng</h2>
-          <p className="text-gray-600">Kiểm duyệt, sửa, xóa bài đăng.</p>
-        </Link>
+    <div className="flex min-h-screen bg-gray-100">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-md p-4">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800">Bảng điều khiển Admin</h2>
+        <nav>
+          <ul>
+            <li className="mb-2">
+              <button
+                onClick={() => handleTabClick('userManagement')}
+                className={`w-full text-left py-2 px-4 rounded-md transition-colors duration-200 ${
+                  activeTab === 'userManagement'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+                tabIndex="0"
+                aria-label="Quản lý người dùng"
+              >
+                Quản lý người dùng
+              </button>
+            </li>
+            <li className="mb-2">
+              <button
+                onClick={() => handleTabClick('postManagement')}
+                className={`w-full text-left py-2 px-4 rounded-md transition-colors duration-200 ${
+                  activeTab === 'postManagement'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+                tabIndex="0"
+                aria-label="Quản lý bài đăng"
+              >
+                Quản lý bài đăng
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      {/* Content Area */}
+      <div className="flex-1 p-8">
+        {activeTab === 'userManagement' && <UserManagement />}
+        {activeTab === 'postManagement' && <PostManagement />}
       </div>
     </div>
   );

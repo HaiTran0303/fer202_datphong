@@ -53,20 +53,16 @@ function Login() {
   };
 
   const validateForm = () => {
-    if (!formData.email.trim()) {
-      setError('Vui lòng nhập email');
+    const { email, password } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+
+    if (!emailRegex.test(email)) {
+      setError('Email không hợp lệ. Vui lòng nhập đúng định dạng email.');
       return false;
     }
-    if (!formData.email.includes('@')) {
-      setError('Email không hợp lệ');
-      return false;
-    }
-    if (!formData.password.trim()) {
-      setError('Vui lòng nhập mật khẩu');
-      return false;
-    }
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+    if (!passwordRegex.test(password)) {
+      setError('Mật khẩu không hợp lệ. Mật khẩu phải có ít nhất 6 ký tự, bao gồm ít nhất một chữ hoa, một chữ thường và một số.');
       return false;
     }
     return true;

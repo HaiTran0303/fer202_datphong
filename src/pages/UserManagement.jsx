@@ -12,6 +12,7 @@ const UserManagement = () => {
     email: '',
     password: '',
     role: 'user', // default role
+    isActive: true, // New field for user status
   });
 
   useEffect(() => {
@@ -35,19 +36,42 @@ const UserManagement = () => {
     }));
   };
 
+  const validateForm = () => {
+    const { email, password } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+
+    if (!emailRegex.test(email)) {
+      alert('Email không hợp lệ. Vui lòng nhập đúng định dạng email.');
+      return false;
+    }
+    if (!passwordRegex.test(password)) {
+      alert('Mật khẩu không hợp lệ. Mật khẩu phải có ít nhất 6 ký tự, bao gồm ít nhất một chữ hoa, một chữ thường và một số.');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
     try {
-      await axios.post('http://localhost:3001/users', formData);
+      const newUser = { ...formData, creationTime: new Date().toISOString() }; // Add creation time
+      await axios.post('http://localhost:3001/users', newUser);
       setFormData({
         fullName: '',
         email: '',
         password: '',
         role: 'user',
+        isActive: true,
       });
       fetchUsers();
+      alert('Thêm người dùng thành công!'); // Add success message
     } catch (error) {
       console.error('Error creating user:', error);
+      alert('Có lỗi xảy ra khi thêm người dùng.'); // Add error message
     }
   };
 
@@ -58,11 +82,15 @@ const UserManagement = () => {
       email: user.email,
       password: user.password, // In a real app, you wouldn't edit passwords like this
       role: user.role,
+      isActive: user.isActive,
     });
   };
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
+    if (!validateForm()) {
+      return;
+    }
     try {
       await axios.put(`http://localhost:3001/users/${editingUser}`, formData);
       setEditingUser(null);
@@ -71,20 +99,32 @@ const UserManagement = () => {
         email: '',
         password: '',
         role: 'user',
+        isActive: true,
       });
       fetchUsers();
+      alert('Cập nhật người dùng thành công!');
     } catch (error) {
       console.error('Error updating user:', error);
+      alert('Có lỗi xảy ra khi cập nhật người dùng.');
     }
   };
 
-  const handleDeleteUser = async (userId) => {
+  const handleToggleActive = async (userId, currentStatus) => {
     try {
-      await axios.delete(`http://localhost:3001/users/${userId}`);
-      fetchUsers();
+      const userToUpdate = users.find(user => user.id === userId);
+      if (userToUpdate) {
+        const updatedUser = { ...userToUpdate, isActive: !currentStatus };
+        await axios.put(`http://localhost:3001/users/${userId}`, updatedUser);
+        fetchUsers();
+      }
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error('Error toggling user status:', error);
     }
+  };
+
+  const handleResetPassword = (userId) => {
+    console.log('Đặt lại mật khẩu cho user:', userId);
+    // In a real application, this would involve a backend call to reset the password
   };
 
   return (
@@ -103,7 +143,7 @@ const UserManagement = () => {
               value={formData.fullName}
               onChange={handleChange}
               required
-              class="mt-1 block w-full"
+              class="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -115,7 +155,7 @@ const UserManagement = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              class="mt-1 block w-full"
+              class="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -127,7 +167,7 @@ const UserManagement = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              class="mt-1 block w-full"
+              class="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -137,17 +177,32 @@ const UserManagement = () => {
               name="role"
               value={formData.role}
               onChange={handleChange}
-              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
             >
               <option value="user">Người dùng</option>
               <option value="admin">Admin</option>
             </select>
           </div>
-          <Button type="submit" class="w-full">
+          {editingUser && (
+            <div>
+              <label htmlFor="isActive" className="block text-sm font-medium text-gray-700">Trạng thái tài khoản</label>
+              <select
+                id="isActive"
+                name="isActive"
+                value={formData.isActive}
+                onChange={handleChange}
+                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              >
+                <option value={true}>Kích hoạt</option>
+                <option value={false}>Chặn</option>
+              </select>
+            </div>
+          )}
+          <Button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
             {editingUser ? 'Cập nhật người dùng' : 'Thêm người dùng'}
           </Button>
           {editingUser && (
-            <Button onClick={() => { setEditingUser(null); setFormData({ fullName: '', email: '', password: '', role: 'user' }); }} class="w-full mt-2 bg-gray-500 hover:bg-gray-600">
+            <Button onClick={() => { setEditingUser(null); setFormData({ fullName: '', email: '', password: '', role: 'user', isActive: true }); }} class="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
               Hủy
             </Button>
           )}
@@ -158,27 +213,43 @@ const UserManagement = () => {
         <table className="min-w-full bg-white shadow-md rounded-lg">
           <thead>
             <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
-              <th className="py-3 px-6 text-left">ID</th>
-              <th className="py-3 px-6 text-left">Tên đầy đủ</th>
+              <th className="py-3 px-6 text-left">Họ và tên</th>
               <th className="py-3 px-6 text-left">Email</th>
               <th className="py-3 px-6 text-left">Vai trò</th>
+              <th className="py-3 px-6 text-left">Thời gian tạo</th>
+              <th className="py-3 px-6 text-left">Trạng thái tài khoản</th>
               <th className="py-3 px-6 text-center">Hành động</th>
             </tr>
           </thead>
           <tbody className="text-gray-600 text-sm font-light">
             {users.map((user) => (
               <tr key={user.id} className="border-b border-gray-200 hover:bg-gray-100">
-                <td className="py-3 px-6 text-left whitespace-nowrap">{user.id}</td>
                 <td className="py-3 px-6 text-left">{user.fullName}</td>
                 <td className="py-3 px-6 text-left">{user.email}</td>
                 <td className="py-3 px-6 text-left">{user.role}</td>
+                <td className="py-3 px-6 text-left">{user.creationTime ? new Date(user.creationTime).toLocaleString() : 'N/A'}</td>
                 <td className="py-3 px-6 text-center">
-                  <div className="flex item-center justify-center space-x-2">
-                    <Button onClick={() => handleEditUser(user)} class="bg-blue-500 hover:bg-blue-600">
+                  <Button 
+                    onClick={() => {
+                      const confirmMessage = user.isActive 
+                        ? 'Bạn muốn chặn người dùng này?' 
+                        : 'Bạn muốn kích hoạt người dùng này?';
+                      if (window.confirm(confirmMessage)) {
+                        handleToggleActive(user.id, user.isActive);
+                      }
+                    }} 
+                    class={`font-bold py-2 px-4 rounded text-xs ${user.isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                  >
+                    {user.isActive ? 'Kích hoạt' : 'Chặn'}
+                  </Button>
+                </td>
+                <td className="py-3 px-6 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Button onClick={() => handleEditUser(user)} class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Sửa
                     </Button>
-                    <Button onClick={() => handleDeleteUser(user.id)} class="bg-red-500 hover:bg-red-600">
-                      Xóa
+                    <Button onClick={() => handleResetPassword(user.id)} class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded text-xs">
+                      Đặt lại mật khẩu
                     </Button>
                   </div>
                 </td>

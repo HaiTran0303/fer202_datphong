@@ -40,31 +40,27 @@ function Register() {
   };
 
   const validateForm = () => {
-    if (!formData.email.trim()) {
-      setError('Vui lòng nhập email');
-      return false;
-    }
-    if (!formData.email.includes('@')) {
-      setError('Email không hợp lệ');
-      return false;
-    }
-    if (!formData.fullName.trim()) {
+    const { email, password, fullName, confirmPassword, agreeTerms } = formData;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+
+    if (!fullName.trim()) {
       setError('Vui lòng nhập họ và tên');
       return false;
     }
-    if (!formData.password.trim()) {
-      setError('Vui lòng nhập mật khẩu');
+    if (!emailRegex.test(email)) {
+      setError('Email không hợp lệ. Vui lòng nhập đúng định dạng email.');
       return false;
     }
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
+    if (!passwordRegex.test(password)) {
+      setError('Mật khẩu không hợp lệ. Mật khẩu phải có ít nhất 6 ký tự, bao gồm ít nhất một chữ hoa, một chữ thường và một số.');
       return false;
     }
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setError('Mật khẩu xác nhận không khớp');
       return false;
     }
-    if (!formData.agreeTerms) {
+    if (!agreeTerms) {
       setError('Vui lòng đồng ý với điều khoản sử dụng');
       return false;
     }
