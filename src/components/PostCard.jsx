@@ -16,11 +16,25 @@ const PostCard = ({ post }) => {
     }
   }, []);
 
-  const formatPrice = (price) => {
-    if (price >= 1000000) {
-      return `${(price / 1000000).toFixed(1)} triệu/tháng`;
+  const formatPrice = (price, type) => {
+    if (price === undefined || price === null) {
+      return 'N/A';
     }
-    return `${price?.toLocaleString()} đồng/tháng`;
+    if (type === 'room_listing') {
+      if (price >= 1000000) {
+        return `${(price / 1000000).toFixed(1)} triệu/tháng`;
+      }
+      return `${price.toLocaleString()} đồng/tháng`;
+    } else if (type === 'roommate_finding') {
+      if (price >= 1000000000) {
+        return `${(price / 1000000000).toFixed(1)} tỷ`;
+      }
+      if (price >= 1000000) {
+        return `${(price / 1000000).toFixed(1)} triệu`;
+      }
+      return `${price.toLocaleString()} đồng`;
+    }
+    return 'N/A';
   };
 
   const formatDate = (dateString) => {
@@ -136,24 +150,52 @@ const PostCard = ({ post }) => {
           </div>
 
           {/* Price and Details */}
-          <div className="mb-2 flex items-center text-sm">
-            <span className="text-green-600 font-semibold text-lg">
-              {formatPrice(post.budget || post.price)}
-            </span>
-            <span className="mx-2 text-gray-400">•</span>
-            <span className="text-gray-600">
-              {post.area} m²
-            </span>
-            <span className="mx-2 text-gray-400">•</span>
-            <span className="text-gray-600">
-              {post.district ? `${post.district}, ${post.location}` : post.location}
-            </span>
-          </div>
+          {post.type === 'room_listing' && (
+            <div className="mb-2 flex items-center text-sm">
+              <span className="text-green-600 font-semibold text-lg">
+                {formatPrice(post.price, post.type)}
+              </span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-600">
+                {post.area} m²
+              </span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-600">
+                {post.district ? `${post.district}, ${post.location}` : post.location}
+              </span>
+            </div>
+          )}
+
+          {post.type === 'roommate_finding' && (
+            <div className="mb-2 flex items-center text-sm">
+              <span className="text-green-600 font-semibold text-lg">
+                {formatPrice(post.budget, post.type)}
+              </span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-600">
+                {post.roomType || 'N/A'}
+              </span>
+              <span className="mx-2 text-gray-400">•</span>
+              <span className="text-gray-600">
+                {post.genderPreference || 'N/A'}
+              </span>
+            </div>
+          )}
 
           {/* Description */}
           <p className="text-gray-600 text-sm line-clamp-2 mb-3 leading-relaxed">
             {post.description}
           </p>
+
+          {/* Additional details for roommate_finding */}
+          {post.type === 'roommate_finding' && (
+            <div className="text-sm text-gray-600 mb-3">
+              <p><strong>Trường:</strong> {post.school || 'N/A'}</p>
+              <p><strong>Ngành:</strong> {post.major || 'N/A'}</p>
+              <p><strong>Năm học:</strong> {post.year || 'N/A'}</p>
+            </div>
+          )}
+
 
           {/* Footer */}
           <div className="flex items-center justify-between">
@@ -181,7 +223,7 @@ const PostCard = ({ post }) => {
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                 </svg>
-                {post.contactPhone || '0123456789'}
+                {post.contactPhone || post.contact?.phone || '0123456789'}
               </button>
               
               {/* Connection Button */}

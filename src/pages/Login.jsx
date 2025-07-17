@@ -55,14 +55,14 @@ function Login() {
   const validateForm = () => {
     const { email, password } = formData;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+    const passwordRegex = /^\d{6,}$/; // Min 6 digits
 
     if (!emailRegex.test(email)) {
       setError('Email không hợp lệ. Vui lòng nhập đúng định dạng email.');
       return false;
     }
     if (!passwordRegex.test(password)) {
-      setError('Mật khẩu không hợp lệ. Mật khẩu phải có ít nhất 6 ký tự, bao gồm ít nhất một chữ hoa, một chữ thường và một số.');
+      setError('Mật khẩu không hợp lệ. Mật khẩu phải có ít nhất 6 chữ số.');
       return false;
     }
     return true;
@@ -78,13 +78,17 @@ function Login() {
     try {
       setError('');
       setLoading(true);
-      await handleLogin(formData.email, formData.password);
+      const user = await handleLogin(formData.email, formData.password);
       
       if (rememberMe) {
         localStorage.setItem('rememberMe', 'true');
       }
       
-      navigate('/');
+      if (user.role === 'admin') {
+        navigate('/admin-dashboard');
+      } else if (user.role === 'user') {
+        navigate('/');
+      }
     } catch (err) {
       console.error('Login error:', err);
       
@@ -130,13 +134,6 @@ function Login() {
             </Link>
           </p>
           
-          {/* Demo Credentials */}
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <h3 className="text-sm font-medium text-blue-900 mb-1">Demo Mode</h3>
-            <p className="text-xs text-blue-700">
-              <strong>Email:</strong> demo@test.com | <strong>Mật khẩu:</strong> 123456
-            </p>
-          </div>
         </div>
 
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">

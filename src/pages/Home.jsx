@@ -325,35 +325,6 @@ const Home = ({ globalSearchTerm, setGlobalSearchTerm }) => { // Receive globalS
             initialFilters={filters} 
           />
 
-          {/* Recent Posts */}
-          <div className="bg-white rounded shadow-sm p-4">
-            <h3 className="font-medium text-gray-800 mb-4">Tin mới đăng</h3>
-            <div className="space-y-4">
-              {posts.slice(0, 5).map((post) => (
-                <div key={post.id} className="flex space-x-3">
-                  <img
-                    src={post.images?.[0] || '/placeholder-image.jpg'}
-                    alt={post.title}
-                    className="w-20 h-16 object-cover rounded flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-blue-600 hover:text-blue-800 line-clamp-2 cursor-pointer">
-                      {post.title}
-                    </h4>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-sm font-semibold text-green-600">
-                        {post.price?.toLocaleString()} đ/tháng
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(post.createdAt).toLocaleDateString('vi-VN')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Blog Posts */}
           <div className="bg-white rounded shadow-sm p-4">
             <h3 className="font-medium text-gray-800 mb-4">Bài viết mới</h3>

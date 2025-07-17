@@ -63,14 +63,6 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
 
   const [tempFilters, setTempFilters] = useState(filters);
 
-  // Handle search
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (onSearch && searchTerm.trim()) {
-      onSearch(searchTerm.trim());
-    }
-  };
-
   // Handle filter changes
   const handleFilterChange = (key, value) => {
     setTempFilters(prev => ({
@@ -158,20 +150,26 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
   return (
     <div className="bg-white shadow-sm rounded-lg p-4 mb-6">
       {/* Search Bar */}
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
             placeholder="Tìm kiếm phòng trọ, địa chỉ, tiện ích..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (onSearch) {
+                onSearch(e.target.value);
+              }
+            }}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
         <button
-          type="submit"
+          type="button"
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          onClick={() => onSearch(searchTerm)} // Still allow explicit search on button click
         >
           Tìm kiếm
         </button>
@@ -190,7 +188,7 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
             </span>
           )}
         </button>
-      </form>
+      </div>
 
       {/* Active Filters Display */}
       {activeFiltersCount > 0 && (
@@ -297,7 +295,7 @@ function SearchFilter({ onSearch, onFilter, initialFilters = {} }) {
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-2">Bộ lọc nâng cao</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 border rounded-lg p-4 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-4 border rounded-lg p-4 bg-gray-50">
             {/* Location Filter */}
             <div className="flex flex-col">
               <label className="block text-sm font-medium text-gray-700 mb-1">Tỉnh/Thành phố</label>

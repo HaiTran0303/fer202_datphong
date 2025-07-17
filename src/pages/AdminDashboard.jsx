@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import UserManagement from './UserManagement';
 import PostManagement from './PostManagement';
+import BlogManagement from './BlogManagement'; // Import BlogManagement
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('userManagement'); // 'userManagement' or 'postManagement'
+  const [activeTab, setActiveTab] = useState('userManagement'); // 'userManagement', 'postManagement', or 'blogManagement'
 
   const handleTabClick = (tab) => {
     setActiveTab(tab);
@@ -44,6 +45,20 @@ const AdminDashboard = () => {
                 Quản lý bài đăng
               </button>
             </li>
+            <li className="mb-2">
+              <button
+                onClick={() => handleTabClick('blogManagement')}
+                className={`w-full text-left py-2 px-4 rounded-md transition-colors duration-200 ${
+                  activeTab === 'blogManagement'
+                    ? 'bg-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+                tabIndex="0"
+                aria-label="Quản lý blog"
+              >
+                Quản lý Blog
+              </button>
+            </li>
           </ul>
         </nav>
       </div>
@@ -52,6 +67,7 @@ const AdminDashboard = () => {
       <div className="flex-1 p-8">
         {activeTab === 'userManagement' && <UserManagement />}
         {activeTab === 'postManagement' && <PostManagement />}
+        {activeTab === 'blogManagement' && <BlogManagement />}
       </div>
     </div>
   );

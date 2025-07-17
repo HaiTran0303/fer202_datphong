@@ -236,66 +236,6 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
               Phòng trọ
             </Link>
             <Link 
-              to="/nha-nguyen-can" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/nha-nguyen-can' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Nhà nguyên căn
-            </Link>
-            <Link 
-              to="/can-ho-chung-cu" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-chung-cu' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ chung cư
-            </Link>
-            <Link 
-              to="/can-ho-mini" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-mini' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ mini
-            </Link>
-            <Link 
-              to="/can-ho-dich-vu" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/can-ho-dich-vu' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Căn hộ dịch vụ
-            </Link>
-            <Link 
-              to="/o-ghep" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/o-ghep' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Ở ghép
-            </Link>
-            <Link 
-              to="/mat-bang" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/mat-bang' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Mặt bằng
-            </Link>
-            <Link 
               to="/blog" 
               className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                 location.pathname === '/blog' 
@@ -304,16 +244,6 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
               }`}
             >
               Blog
-            </Link>
-            <Link 
-              to="/bang-gia" 
-              className={`py-3 text-sm font-medium border-b-2 transition-colors ${
-                location.pathname === '/bang-gia' 
-                  ? 'text-orange-500 border-orange-500' 
-                  : 'text-gray-600 border-transparent hover:text-gray-800'
-              }`}
-            >
-              Bảng giá dịch vụ
             </Link>
           </div>
         </div>

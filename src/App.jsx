@@ -21,6 +21,7 @@ import UserManagement from './pages/UserManagement';
 import PostManagement from './pages/PostManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useState } from 'react'; // Import useState
+import Blog from './pages/Blog'; // Import Blog component
 import './App.css';
 
 function App() {
@@ -74,9 +75,8 @@ function App() {
                 <Route path="/can-ho-chung-cu" element={<Home />} />
                 <Route path="/can-ho-mini" element={<Home />} />
                 <Route path="/can-ho-dich-vu" element={<Home />} />
-                <Route path="/o-ghep" element={<Home />} />
                 <Route path="/mat-bang" element={<Home />} />
-                <Route path="/blog" element={<Home />} />
+                <Route path="/blog" element={<Blog />} /> {/* Route /blog to Blog component */}
                 <Route path="/bang-gia" element={<Home />} />
                 
                 {/* Location Routes */}
