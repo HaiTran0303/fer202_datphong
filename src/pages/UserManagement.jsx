@@ -39,7 +39,7 @@ const UserManagement = () => {
   const validateForm = () => {
     const { email, password } = formData;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+    const passwordRegex = /^.{6,}$/; 
 
     if (!emailRegex.test(email)) {
       alert('Email không hợp lệ. Vui lòng nhập đúng định dạng email.');
@@ -143,7 +143,7 @@ const UserManagement = () => {
               value={formData.fullName}
               onChange={handleChange}
               required
-              class="mt-1 block w-full border border-gray-300"
+              className="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -155,7 +155,7 @@ const UserManagement = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              class="mt-1 block w-full border border-gray-300"
+              className="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -167,7 +167,7 @@ const UserManagement = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              class="mt-1 block w-full border border-gray-300"
+              className="mt-1 block w-full border border-gray-300"
             />
           </div>
           <div>
@@ -177,7 +177,7 @@ const UserManagement = () => {
               name="role"
               value={formData.role}
               onChange={handleChange}
-              class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
             >
               <option value="user">Người dùng</option>
               <option value="admin">Admin</option>
@@ -191,18 +191,18 @@ const UserManagement = () => {
                 name="isActive"
                 value={formData.isActive}
                 onChange={handleChange}
-                class="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
               >
                 <option value={true}>Kích hoạt</option>
                 <option value={false}>Chặn</option>
               </select>
             </div>
           )}
-          <Button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+          <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
             {editingUser ? 'Cập nhật người dùng' : 'Thêm người dùng'}
           </Button>
           {editingUser && (
-            <Button onClick={() => { setEditingUser(null); setFormData({ fullName: '', email: '', password: '', role: 'user', isActive: true }); }} class="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+            <Button onClick={() => { setEditingUser(null); setFormData({ fullName: '', email: '', password: '', role: 'user', isActive: true }); }} className="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
               Hủy
             </Button>
           )}
@@ -238,17 +238,17 @@ const UserManagement = () => {
                         handleToggleActive(user.id, user.isActive);
                       }
                     }} 
-                    class={`font-bold py-2 px-4 rounded text-xs ${user.isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
+                    className={`font-bold py-2 px-4 rounded text-xs ${user.isActive ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white`}
                   >
                     {user.isActive ? 'Kích hoạt' : 'Chặn'}
                   </Button>
                 </td>
                 <td className="py-3 px-6 text-center">
                   <div className="flex items-center justify-center space-x-2">
-                    <Button onClick={() => handleEditUser(user)} class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleEditUser(user)} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Sửa
                     </Button>
-                    <Button onClick={() => handleResetPassword(user.id)} class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleResetPassword(user.id)} className="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Đặt lại mật khẩu
                     </Button>
                   </div>

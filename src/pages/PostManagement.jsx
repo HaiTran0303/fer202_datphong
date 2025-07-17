@@ -150,86 +150,86 @@ const PostManagement = () => {
         <form onSubmit={handleUpdatePost} className="space-y-4">
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-700">Tiêu đề</label>
-            <Input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="title" name="title" value={formData.title} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-700">Mô tả</label>
-            <textarea id="description" name="description" value={formData.description} onChange={handleChange} required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"></textarea>
+            <textarea id="description" name="description" value={formData.description} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm"></textarea>
           </div>
           <div>
             <label htmlFor="price" className="block text-sm font-medium text-gray-700">Giá</label>
-            <Input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="area" className="block text-sm font-medium text-gray-700">Diện tích (m²)</label>
-            <Input type="number" id="area" name="area" value={formData.area} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="area" name="area" value={formData.area} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="location" className="block text-sm font-medium text-gray-700">Địa điểm</label>
-            <Input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="location" name="location" value={formData.location} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="district" className="block text-sm font-medium text-gray-700">Quận/Huyện</label>
-            <Input type="text" id="district" name="district" value={formData.district} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="district" name="district" value={formData.district} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="category" className="block text-sm font-medium text-gray-700">Danh mục</label>
-            <Input type="text" id="category" name="category" value={formData.category} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="category" name="category" value={formData.category} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="images" className="block text-sm font-medium text-gray-700">Hình ảnh (URL, cách nhau bởi dấu phẩy)</label>
-            <Input type="text" id="images" name="images" value={formData.images.join(', ')} onChange={(e) => handleArrayChange(e, 'images')} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="images" name="images" value={formData.images.join(', ')} onChange={(e) => handleArrayChange(e, 'images')} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="amenities" className="block text-sm font-medium text-gray-700">Tiện nghi (cách nhau bởi dấu phẩy)</label>
-            <Input type="text" id="amenities" name="amenities" value={formData.amenities.join(', ')} onChange={(e) => handleArrayChange(e, 'amenities')} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="amenities" name="amenities" value={formData.amenities.join(', ')} onChange={(e) => handleArrayChange(e, 'amenities')} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="utilities" className="block text-sm font-medium text-gray-700">Chi phí khác (cách nhau bởi dấu phẩy)</label>
-            <Input type="text" id="utilities" name="utilities" value={formData.utilities.join(', ')} onChange={(e) => handleArrayChange(e, 'utilities')} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="utilities" name="utilities" value={formData.utilities.join(', ')} onChange={(e) => handleArrayChange(e, 'utilities')} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="deposit" className="block text-sm font-medium text-gray-700">Tiền đặt cọc</label>
-            <Input type="number" id="deposit" name="deposit" value={formData.deposit} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="deposit" name="deposit" value={formData.deposit} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="contact.name" className="block text-sm font-medium text-gray-700">Tên liên hệ</label>
-            <Input type="text" id="contact.name" name="contact.name" value={formData.contact.name} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="contact.name" name="contact.name" value={formData.contact.name} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="contact.phone" className="block text-sm font-medium text-gray-700">Số điện thoại liên hệ</label>
-            <Input type="text" id="contact.phone" name="contact.phone" value={formData.contact.phone} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="contact.phone" name="contact.phone" value={formData.contact.phone} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="contact.email" className="block text-sm font-medium text-gray-700">Email liên hệ</label>
-            <Input type="email" id="contact.email" name="contact.email" value={formData.contact.email} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="email" id="contact.email" name="contact.email" value={formData.contact.email} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="address" className="block text-sm font-medium text-gray-700">Địa chỉ</label>
-            <Input type="text" id="address" name="address" value={formData.address} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="address" name="address" value={formData.address} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="userId" className="block text-sm font-medium text-gray-700">ID người dùng</label>
-            <Input type="text" id="userId" name="userId" value={formData.userId} onChange={handleChange} required class="mt-1 block w-full border border-gray-300" />
+            <Input type="text" id="userId" name="userId" value={formData.userId} onChange={handleChange} required className="mt-1 block w-full border border-gray-300" />
           </div>
           <div className="flex items-center">
-            <input type="checkbox" id="featured" name="featured" checked={formData.featured} onChange={handleCheckboxChange} class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
+            <input type="checkbox" id="featured" name="featured" checked={formData.featured} onChange={handleCheckboxChange} className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" />
             <label htmlFor="featured" className="ml-2 block text-sm text-gray-900">Nổi bật</label>
           </div>
           <div>
             <label htmlFor="rating" className="block text-sm font-medium text-gray-700">Đánh giá</label>
-            <Input type="number" id="rating" name="rating" value={formData.rating} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="rating" name="rating" value={formData.rating} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="views" className="block text-sm font-medium text-gray-700">Lượt xem</label>
-            <Input type="number" id="views" name="views" value={formData.views} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="views" name="views" value={formData.views} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
           <div>
             <label htmlFor="likes" className="block text-sm font-medium text-gray-700">Lượt thích</label>
-            <Input type="number" id="likes" name="likes" value={formData.likes} onChange={handleChange} class="mt-1 block w-full border border-gray-300" />
+            <Input type="number" id="likes" name="likes" value={formData.likes} onChange={handleChange} className="mt-1 block w-full border border-gray-300" />
           </div>
 
-          <Button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+          <Button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
             {editingPost ? 'Cập nhật bài đăng' : 'Thêm bài đăng'}
           </Button>
           {editingPost && (
@@ -238,7 +238,7 @@ const PostManagement = () => {
               setFormData({ 
                 title: '', description: '', price: 0, area: 0, location: '', district: '', category: '', images: [], amenities: [], utilities: [], deposit: 0, contact: { name: '', phone: '', email: '' }, address: '', userId: '', featured: false, rating: 0, views: 0, likes: 0 
               }); 
-            }} class="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+            }} className="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
               Hủy
             </Button>
           )}
@@ -265,13 +265,13 @@ const PostManagement = () => {
                 <td className="py-3 px-6 text-left">{post.featured ? 'Có' : 'Không'}</td>
                 <td className="py-3 px-6 text-center">
                   <div className="flex items-center justify-center space-x-2">
-                    <Button onClick={() => handleEditPost(post)} class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleEditPost(post)} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Sửa
                     </Button>
-                    <Button onClick={() => handleDeletePost(post.id)} class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleDeletePost(post.id)} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Xóa
                     </Button>
-                    <Button onClick={() => handleViewDetails(post)} class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded text-xs">
+                    <Button onClick={() => handleViewDetails(post)} className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded text-xs">
                       Xem chi tiết
                     </Button>
                   </div>
@@ -322,7 +322,7 @@ const PostManagement = () => {
             </div>
           </ModalContent>
           <ModalFooter>
-            <Button onClick={closeModal} class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
+            <Button onClick={closeModal} className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded">
               Đóng
             </Button>
           </ModalFooter>

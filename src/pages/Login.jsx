@@ -86,7 +86,7 @@ function Login() {
       
       console.log('User role:', user.role); // Add this line to log the user role
       if (user.role === 'admin') {
-        navigate('/admin-dashboard');
+        navigate('/admin');
       } else if (user.role === 'user') {
         navigate('/');
       }
