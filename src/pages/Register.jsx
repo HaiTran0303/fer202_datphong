@@ -42,7 +42,7 @@ function Register() {
   const validateForm = () => {
     const { email, password, fullName, confirmPassword, agreeTerms } = formData;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/; // Min 6 chars, 1 uppercase, 1 lowercase, 1 number
+    const passwordRegex = /^.{6,}$/;
 
     if (!fullName.trim()) {
       setError('Vui lòng nhập họ và tên');
@@ -97,13 +97,20 @@ function Register() {
         phone: formData.phone,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        role: 'user', // Automatically assign 'user' role
+        isActive: true, // Assuming new users are active by default
+        creationTime: new Date().toISOString() // Add creation time
         // Add other default profile fields if necessary
       };
       
       await axios.post(`${API_BASE_URL}/users`, newUser);
       
-      alert('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigate('/login');
+      // Use error state for success message temporarily
+      setError('Đăng ký thành công! Vui lòng đăng nhập.'); 
+      setTimeout(() => { // Clear message and navigate after a short delay
+        setError('');
+        navigate('/login');
+      }, 2000); 
     } catch (err) {
       console.error('Registration error:', err);
       
@@ -144,14 +151,6 @@ function Register() {
               đăng nhập nếu đã có tài khoản
             </Link>
           </p>
-          
-          {/* Demo Notice */}
-          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-            <h3 className="text-sm font-medium text-green-900 mb-1">Demo Mode</h3>
-            <p className="text-xs text-green-700">
-              Bạn có thể đăng ký với bất kỳ email nào để test tính năng
-            </p>
-          </div>
         </div>
 
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
