@@ -2,47 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { Bell, Check, X, UserPlus, MessageCircle, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-// Mock user data for notifications
-const mockUsers = [
-  { uid: 'fake-uid-123', fullName: 'Demo User', avatar: 'https://via.placeholder.com/48' },
-  { uid: 'other-user-456', fullName: 'Nguyễn Văn A', avatar: 'https://via.placeholder.com/48' },
-  { uid: 'another-user-789', fullName: 'Trần Thị B', avatar: 'https://via.placeholder.com/48' },
-];
+import axios from 'axios';
+import { useSocket } from '../hooks/useSocket';
 
-// Mock notifications data
-let mockNotifications = [];
-
-// Helper functions for notifications (mock implementations)
-async function getNotifications(userId) {
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return mockNotifications.filter(n => n.userId === userId).map(n => {
-    if (n.type === 'connection_request' && n.data.fromUserId) {
-      n.fromUser = mockUsers.find(u => u.uid === n.data.fromUserId);
-    }
-    return n;
-  }).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-async function markNotificationAsRead(notificationId) {
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const notification = mockNotifications.find(n => n.id === notificationId);
-  if (notification) {
-    notification.isRead = true;
-    notification.updatedAt = new Date().toISOString();
-  }
-}
-
-function onNotificationsChange(userId, callback) {
-  // Simulate real-time updates by re-fetching notifications periodically
-  const interval = setInterval(async () => {
-    const notifications = mockNotifications.filter(n => n.userId === userId);
-    callback(notifications);
-  }, 1000); // Update every 1 second for demo
-  return () => clearInterval(interval); // Cleanup function
-}
+const API_BASE_URL = 'http://localhost:3001';
 
 function NotificationDropdown() {
-  const currentUser = mockUsers[0]; // Assume the first mock user is always logged in for demo
+  const currentUser = useState(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    return storedUser ? JSON.parse(storedUser) : null;
+  })[0];
+  const { socket } = useSocket();
+
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -50,57 +21,92 @@ function NotificationDropdown() {
   const dropdownRef = useRef(null);
 
   useEffect(() => {
-    // Initialize mock data if not already present
-    if (mockNotifications.length === 0) {
-      mockNotifications = [
-        {
-          id: 'notif1',
-          userId: currentUser.uid,
-          type: 'connection_request',
-          data: { fromUserId: 'other-user-456', message: 'Bạn có lời mời kết nối mới từ Nguyễn Văn A' },
-          isRead: false,
-          createdAt: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: 'notif2',
-          userId: currentUser.uid,
-          type: 'connection_accepted',
-          data: { toUserId: 'another-user-789' },
-          isRead: false,
-          createdAt: new Date(Date.now() - 7200000).toISOString(),
-        },
-        {
-          id: 'notif3',
-          userId: currentUser.uid,
-          type: 'message',
-          data: { fromUserId: 'other-user-456', message: 'Nguyễn Văn A đã gửi tin nhắn cho bạn' },
-          isRead: true,
-          createdAt: new Date(Date.now() - 10800000).toISOString(),
-        },
-      ];
-    }
+    if (!currentUser?.id) return;
 
-    if (currentUser) {
-      loadNotifications();
-      
-      // Listen for real-time updates
-      const unsubscribe = onNotificationsChange(currentUser.uid, (newNotifications) => {
-        setNotifications(newNotifications);
-        setUnreadCount(newNotifications.filter(n => !n.isRead).length);
+    loadNotifications();
+
+    if (socket) {
+      // Listen for new notifications from the server
+      socket.on('newNotification', async (newNotification) => {
+        console.log('New notification received:', newNotification);
+        let processedNotification = { ...newNotification };
+
+        // Ensure fromUser is populated for connection_request types
+        if (processedNotification.type === 'connection_request' && processedNotification.relatedEntity?.id) {
+          // Only fetch if fromUser is not already present (e.g., from server-side enrichment)
+          if (!processedNotification.fromUser || !processedNotification.fromUser.fullName) {
+            try {
+              const connectionRes = await axios.get(`${API_BASE_URL}/connections/${processedNotification.relatedEntity.id}`);
+              const connection = connectionRes.data;
+              if (connection && connection.senderId) {
+                const senderRes = await axios.get(`${API_BASE_URL}/users/${connection.senderId}`);
+                processedNotification.fromUser = senderRes.data; // Attach sender info
+              }
+            } catch (err) {
+              console.error('Error fetching connection/sender for new notification:', err);
+            }
+          }
+        }
+        // Ensure fromUser is populated for connection_accepted notifications (where fromUser is the acceptor)
+        else if (processedNotification.type === 'connection_accepted' && processedNotification.relatedEntity?.id) {
+            if (!processedNotification.fromUser || !processedNotification.fromUser.fullName) {
+                try {
+                    const connectionRes = await axios.get(`${API_BASE_URL}/connections/${processedNotification.relatedEntity.id}`);
+                    const connection = connectionRes.data;
+                    if (connection && connection.receiverId) { // FromUser in accepted notification is the receiver
+                        const receiverRes = await axios.get(`${API_BASE_URL}/users/${connection.receiverId}`);
+                        processedNotification.fromUser = receiverRes.data;
+                    }
+                } catch (err) {
+                    console.error('Error fetching receiver for accepted notification:', err);
+                }
+            }
+        }
+
+
+        setNotifications((prev) => {
+          // Prevent duplicates if notification is already there
+          if (prev.some(n => n.id === processedNotification.id)) return prev;
+          // Add new notification to the top
+          return [processedNotification, ...prev].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
+        setUnreadCount(prev => prev + 1); // Increment unread count
       });
 
-      return unsubscribe;
+      // Clean up socket listener
+      return () => {
+        socket.off('newNotification');
+      };
     }
-  }, [currentUser]);
+  }, [currentUser, socket]);
 
   const loadNotifications = async () => {
-    if (!currentUser) return;
+    if (!currentUser?.id) return;
     
     setLoading(true);
     try {
-      const data = await getNotifications(currentUser.uid);
-      setNotifications(data);
-      setUnreadCount(data.filter(n => !n.isRead).length);
+      const response = await axios.get(`${API_BASE_URL}/notifications?userId=${currentUser.id}&_sort=createdAt&_order=desc`);
+      const fetchedNotifications = response.data;
+      
+      // Fetch sender info for connection requests if not already included
+      const notificationsWithSender = await Promise.all(fetchedNotifications.map(async (notif) => {
+        if (notif.type === 'connection_request' && notif.relatedEntity?.id) {
+          try {
+            const connectionRes = await axios.get(`${API_BASE_URL}/connections/${notif.relatedEntity.id}`);
+            const connection = connectionRes.data;
+            if (connection && connection.senderId) {
+              const senderRes = await axios.get(`${API_BASE_URL}/users/${connection.senderId}`);
+              notif.fromUser = senderRes.data; // Attach sender info
+            }
+          } catch (err) {
+            console.error('Error fetching connection/sender for notification:', err);
+          }
+        }
+        return notif;
+      }));
+
+      setNotifications(notificationsWithSender);
+      setUnreadCount(notificationsWithSender.filter(n => !n.isRead).length);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -110,7 +116,7 @@ function NotificationDropdown() {
 
   const handleMarkAsRead = async (notificationId) => {
     try {
-      await markNotificationAsRead(notificationId);
+      await axios.patch(`${API_BASE_URL}/notifications/${notificationId}`, { isRead: true });
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
@@ -124,7 +130,7 @@ function NotificationDropdown() {
     try {
       const unreadNotifications = notifications.filter(n => !n.isRead);
       await Promise.all(
-        unreadNotifications.map(n => markNotificationAsRead(n.id))
+        unreadNotifications.map(n => axios.patch(`${API_BASE_URL}/notifications/${n.id}`, { isRead: true }))
       );
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
@@ -277,7 +283,10 @@ function NotificationDropdown() {
                           
                           <Link
                             to={getNotificationLink(notification)}
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                              setIsOpen(false);
+                              handleMarkAsRead(notification.id);
+                            }}
                             className="text-xs text-blue-600 hover:text-blue-800"
                           >
                             Xem chi tiết

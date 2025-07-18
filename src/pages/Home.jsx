@@ -4,6 +4,7 @@ import PostCard from '../components/PostCard';
 import SearchFilter from '../components/SearchFilter';
 import Pagination from '../components/Pagination';
 import axios from 'axios';
+import ChatWindow from '../components/ChatWindow';
 
 const LOCATIONS = [
   "Hồ Chí Minh",
@@ -352,6 +353,10 @@ const Home = ({ globalSearchTerm, setGlobalSearchTerm }) => { // Receive globalS
             </ul>
           </div>
         </div>
+      </div>
+      {/* Add ChatWindow component for testing */}
+      <div className="mt-8 h-[600px]"> {/* Added a fixed height for demonstration */}
+        <ChatWindow />
       </div>
     </div>
   );

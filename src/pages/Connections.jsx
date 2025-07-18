@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  MessageCircle, 
-  UserPlus, 
-  Heart, 
-  Clock, 
-  Check, 
+import axios from 'axios'; // Import axios
+import { useSocket } from '../hooks/useSocket'; // Import useSocket
+import {
+  MessageCircle,
+  UserPlus,
+  Heart,
+  Clock,
+  Check,
   X,
   Send,
   Star,
@@ -19,148 +21,232 @@ import {
   Search
 } from 'lucide-react';
 
-// Mock functions to replace Firebase calls
-async function getSentConnections(userId) {
-  console.log('Mock: getSentConnections called for userId:', userId);
-  return [];
-}
-
-async function getReceivedConnections(userId) {
-  console.log('Mock: getReceivedConnections called for userId:', userId);
-  return [];
-}
-
-async function getActiveConversations(userId) {
-  console.log('Mock: getActiveConversations called for userId:', userId);
-  return [];
-}
-
-async function sendMessage(connectionId, fromUserId, toUserId, content) {
-  console.log('Mock: sendMessage called:', { connectionId, fromUserId, toUserId, content });
-  return { id: `mock-msg-${Date.now()}`, connectionId, fromUserId, toUserId, content, createdAt: new Date().toISOString() };
-}
-
-async function acceptConnection(connectionId) {
-  console.log('Mock: acceptConnection called for connectionId:', connectionId);
-  return { success: true };
-}
-
-async function declineConnection(connectionId) {
-  console.log('Mock: declineConnection called for connectionId:', connectionId);
-  return { success: true };
-}
-
-async function getMessagesByConnectionId(connectionId) {
-  console.log('Mock: getMessagesByConnectionId called for connectionId:', connectionId);
-  return [];
-}
+const API_BASE_URL = 'http://localhost:3001'; // API server running on port 3001
 
 function Connections() {
-  // currentUser sẽ cần được cung cấp thông qua một cơ chế khác
-  // Tạm thời để trống hoặc gán giá trị mặc định để tránh lỗi
-  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
-  const [activeTab, setActiveTab] = useState('messages'); 
-  const [messages, setMessages] = useState([]); 
+  const currentUser = useState(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    return storedUser ? JSON.parse(storedUser) : null;
+  })[0];
+  const { socket } = useSocket(); // Lấy socket instance
+  const [activeTab, setActiveTab] = useState('messages');
+  const [messages, setMessages] = useState([]);
   const [sentInvitations, setSentInvitations] = useState([]);
   const [receivedInvitations, setReceivedInvitations] = useState([]);
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState([]); // Currently not implemented for this task
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] });
+  const [selectedConversation, setSelectedConversation] = useState(null); // Changed to null initially
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [invitationTab, setInvitationTab] = useState('received');
 
   useEffect(() => {
-    fetchConnections();
+    if (currentUser?.id) { // Only fetch connections if currentUser.id exists
+      fetchConnections();
+    }
 
-    // Setup real-time listener for connections/invitations (Mock - no-op)
-    // Removed Firebase specific real-time listeners and data fetching
-    // The data will be fetched once on component mount via fetchConnections
-    return () => {}; // Return a no-op cleanup function
-  }, [currentUser]); // Only re-run if currentUser changes
+    if (socket) {
+      // Join room for the selected conversation when it changes
+      if (selectedConversation?.id) {
+        socket.emit('joinRoom', selectedConversation.id);
+        console.log(`Joined room: ${selectedConversation.id}`);
+      }
+      
+      socket.on('newConnectionRequest', async (newRequest) => {
+        console.log('Received new connection request via socket:', newRequest);
+        let processedRequest = { ...newRequest };
+
+        // Fetch sender info for new connection requests
+        if (processedRequest.senderId) {
+          console.log('Fetching sender details for senderId:', processedRequest.senderId);
+          try {
+            const userRes = await axios.get(`${API_BASE_URL}/users/${processedRequest.senderId}`);
+            processedRequest.fromUser = userRes.data; // Attach sender info
+            console.log('Fetched sender data:', processedRequest.fromUser);
+          } catch (err) {
+            console.error('Error fetching sender for new connection request:', err);
+          }
+        }
+
+        setReceivedInvitations((prev) => {
+          // Prevent duplicates
+          if (!prev.some(inv => inv.id === processedRequest.id)) {
+            return [...prev, { ...processedRequest, type: 'received' }];
+          }
+          return prev;
+        });
+      });
+
+      socket.on('connectionAccepted', (acceptedConnection) => {
+        console.log('Connection accepted via socket:', acceptedConnection);
+        setSentInvitations((prev) =>
+          prev.map((inv) =>
+            inv.id === acceptedConnection.id ? { ...inv, status: 'accepted' } : inv
+          )
+        );
+        // Optionally, add to messages or trigger a chat window
+      });
+
+      socket.on('connectionRejected', (rejectedConnection) => {
+        console.log('Connection rejected via socket:', rejectedConnection);
+        setSentInvitations((prev) =>
+          prev.map((inv) =>
+            inv.id === rejectedConnection.id ? { ...inv, status: 'rejected' } : inv
+          )
+        );
+      });
+
+      socket.on('newNotification', (notification) => {
+        console.log('Received new notification:', notification);
+        // This could be handled by a global notification system
+        // For now, we'll just log it. The server already adds to db.notifications.
+      });
+
+      socket.on('receiveMessage', (newMessage) => {
+        console.log('Received message:', newMessage);
+        setSelectedConversation(prev => {
+          // Check if the received message belongs to the currently selected conversation
+          if (prev && prev.id === newMessage.conversationId) {
+            // Add the new message to the conversation array
+            return {
+              ...prev,
+              conversation: [...(prev.conversation || []), newMessage]
+            };
+          }
+          // If it's not for the current conversation, or no conversation is selected, just return previous state
+          return prev;
+        });
+      });
+
+      return () => {
+        socket.off('newConnectionRequest');
+        socket.off('connectionAccepted');
+        socket.off('connectionRejected');
+        socket.off('newNotification');
+        socket.off('receiveMessage');
+      };
+    }
+  }, [socket, currentUser]);
 
   useEffect(() => {
-    // Removed Firebase specific real-time listeners for messages
-    // Messages will be fetched once on conversation selection
-    return () => {}; // Return a no-op cleanup function
-  }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
+    const fetchMessages = async () => {
+      if (selectedConversation && selectedConversation.id) {
+        console.log(`Attempting to fetch messages for conversation ID: ${selectedConversation.id}`); // Added log
+        try {
+          const response = await axios.get(`${API_BASE_URL}/messages/${selectedConversation.id}`);
+          // Ensure that the conversation array is correctly updated
+          // Map fetched messages to include sender and content properties for display
+          const fetchedMessages = response.data.map(msg => ({
+            ...msg,
+            senderId: msg.senderId, // Ensure senderId is present
+            content: msg.content, // Ensure content is present
+            time: msg.timestamp // Use timestamp as time for display
+          }));
+          setSelectedConversation(prev => ({ ...prev, conversation: fetchedMessages }));
+          console.log(`Successfully fetched ${fetchedMessages.length} messages.`); // Added log
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+          setSelectedConversation(prev => ({ ...prev, conversation: [] })); // Set to empty array on error
+        }
+      } else if (selectedConversation) {
+        console.log('Selected conversation exists but has no ID, setting conversation to empty.'); // Added log
+        setSelectedConversation(prev => ({ ...prev, conversation: [] })); 
+      } else {
+        console.log('No selected conversation to fetch messages for.'); // Added log
+      }
+    };
+    fetchMessages();
+  }, [selectedConversation?.id]); // Only re-fetch when conversation ID changes
 
   const fetchConnections = async () => {
-    if (!currentUser) {
-      console.log('Connections: No current user, skipping fetchConnections');
+    console.log('Connections: fetchConnections function called.'); // NEW LOG
+    if (!currentUser?.id) {
+      console.log('Connections: No current user ID, skipping fetchConnections');
+      setLoading(false);
       return;
     }
     setLoading(true);
-    console.log('Connections: Fetching connections for user ID:', currentUser.uid);
+    console.log('Connections: Fetching connections for user ID:', currentUser.id);
     try {
-      const [sentConnections, receivedConnections, activeConversations] = await Promise.all([
-        getSentConnections(currentUser.uid),
-        getReceivedConnections(currentUser.uid),
-        getActiveConversations(currentUser.uid)
+      // Fetch all connections and all users from the API
+      const [connectionsResponse, usersResponse] = await Promise.all([
+        axios.get(`${API_BASE_URL}/connections`),
+        axios.get(`${API_BASE_URL}/users`)
       ]);
+      console.log('Connections: raw connections response:', connectionsResponse.data); // NEW LOG
+      console.log('Connections: raw users response:', usersResponse.data); // NEW LOG
+      const allConnections = connectionsResponse.data;
+      const allUsers = usersResponse.data;
+      console.log('Connections: All connections fetched:', allConnections);
+      console.log('Connections: All users fetched:', allUsers);
 
-      console.log('Connections: Raw fetched sent connections:', sentConnections);
-      console.log('Connections: Raw fetched received connections:', receivedConnections);
-      console.log('Connections: Raw fetched active conversations:', activeConversations);
+      // Helper to get user details by ID
+      const getUserDetails = (userId) => allUsers.find(user => user.id === userId);
+      
+      // Filter for sent and received invitations, and resolve user details
+      const sent = allConnections
+        .filter(conn => conn.senderId === currentUser.id && conn.status === 'pending')
+        .map(conn => ({
+          ...conn,
+          type: 'sent',
+          toUser: getUserDetails(conn.receiverId),
+        }));
+      console.log('Connections: Sent pending invitations:', sent); // Log sent pending invitations
 
-      const sent = sentConnections.map(conn => ({
-        id: conn.id,
-        type: 'sent',
-        toUser: conn.toUser,
-        postId: conn.postId,
-        postTitle: conn.post?.title || 'Bài đăng',
-        message: conn.message,
-        timestamp: conn.createdAt,
-        status: conn.status
-      }));
+      const received = allConnections
+        .filter(conn => conn.receiverId === currentUser.id && conn.status === 'pending')
+        .map(conn => ({
+          ...conn,
+          type: 'received',
+          fromUser: getUserDetails(conn.senderId),
+        }));
+      console.log('Connections: Received pending invitations:', received); // Log received pending invitations
 
-      const received = receivedConnections.map(conn => ({
-        id: conn.id,
-        type: 'received',
-        fromUser: conn.fromUser,
-        postId: conn.postId,
-        postTitle: conn.post?.title || 'Bài đăng',
-        message: conn.message,
-        timestamp: conn.createdAt,
-        status: conn.status
-      }));
+      // Filter for accepted connections to populate messages tab
+      // Ensure that accepted connections are correctly identified
+      const acceptedConnections = allConnections.filter(conn => 
+        conn.status === 'accepted' && 
+        (conn.senderId === currentUser.id || conn.receiverId === currentUser.id)
+      );
+      console.log('Connections: Accepted connections for current user:', acceptedConnections); // Log accepted connections
 
-      const mappedMessages = activeConversations.map(conv => ({
-        id: conv.id,
-        otherUser: conv.otherUser,
-        postTitle: conv.post?.title || 'Bài đăng',
-        lastMessage: conv.message,
-        lastMessageTime: conv.updatedAt?.toDate ? conv.updatedAt.toDate().toISOString() : new Date().toISOString(),
-        unread: false
-      }));
-
-      console.log('Connections: Transformed sent invitations:', sent);
-      console.log('Connections: Transformed received invitations:', received);
-      console.log('Connections: Mapped active conversations (messages):', mappedMessages);
-
+      const mappedMessages = acceptedConnections.map(conn => {
+        const otherUserId = conn.senderId === currentUser.id ? conn.receiverId : conn.senderId;
+        const otherUser = getUserDetails(otherUserId);
+        return {
+          id: conn.id,
+          otherUser: otherUser,
+          postTitle: `Bài đăng ${conn.postId}`, // Placeholder, fetch post title if needed
+          lastMessage: conn.message, // Or the last message in a conversation thread
+          lastMessageTime: conn.createdAt, // Or the last message's time
+          unread: false // Needs real logic
+        };
+      });
+      console.log('Connections: Mapped messages (conversations):', mappedMessages); // Log mapped messages
 
       setSentInvitations(sent);
       setReceivedInvitations(received);
       setMessages(mappedMessages);
-      setMatches([]);
+      setMatches([]); // Clear matches for now, as it's not implemented
     } catch (error) {
       console.error('Connections: Error fetching connections:', error);
     } finally {
       setLoading(false);
-      console.log('Connections: Loading state set to false.');
     }
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+    if (!newMessage.trim() || !selectedConversation || !socket) return;
 
     try {
-      const fromUserId = currentUser.uid;
-      const toUserId = selectedConversation.otherUser.uid;
-      const connectionId = selectedConversation.id;
-
-      await sendMessage(connectionId, fromUserId, toUserId, newMessage);
+      const messageData = {
+        conversationId: selectedConversation.id,
+        senderId: currentUser.id,
+        message: newMessage.trim(), // Use 'message' key to match server
+        time: new Date().toISOString(), // Use ISO string for consistency with server
+      };
+      socket.emit('sendMessage', messageData);
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -170,86 +256,39 @@ function Connections() {
 
   const handleInvitationResponse = async (invitationId, response) => {
     try {
+      const url = `${API_BASE_URL}/connections/${invitationId}`;
+      await axios.put(url, { status: response === 'accept' ? 'accepted' : 'rejected' });
+      fetchConnections(); // Re-fetch all connections to update state
+
+      // If accepted, add to messages tab and set as selected conversation
       if (response === 'accept') {
-        await acceptConnection(invitationId);
         const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
         if (acceptedInvitation) {
-          console.log('Connections: Accepted Invitation:', acceptedInvitation);
-          console.log('Connections: acceptedInvitation.fromUser:', acceptedInvitation.fromUser);
-          console.log('Connections: acceptedInvitation.toUser:', acceptedInvitation.toUser);
-
-          let otherUser;
-          if (acceptedInvitation.fromUser && acceptedInvitation.fromUser.uid) {
-            otherUser = (acceptedInvitation.fromUser.uid === currentUser.uid)
-              ? acceptedInvitation.toUser
-              : acceptedInvitation.fromUser;
-          } else {
-            const targetUserId = acceptedInvitation.fromUserId === currentUser.uid
-              ? acceptedInvitation.toUserId
-              : acceptedInvitation.fromUserId;
-            
-            otherUser = {
-              uid: targetUserId,
-              name: "Người dùng không xác định",
-              avatar: "https://via.placeholder.com/48",
-            };
-            console.warn('Connections: Using fallback otherUser due to undefined fromUser/toUser in acceptedInvitation:', acceptedInvitation);
-          }
-
-          if (!otherUser) {
-            console.error('Connections: otherUser is still undefined even after fallback logic.');
-            alert('Lỗi: Không thể xác định người dùng khác trong cuộc trò chuyện.');
-            return;
-          }
-          console.log('Connections: Determined otherUser:', otherUser);
+          // Fetch the full user details for the other user
+          const userRes = await axios.get(`${API_BASE_URL}/users/${acceptedInvitation.senderId}`);
+          const otherUser = userRes.data;
           
-          const conversationMessages = await getMessagesByConnectionId(invitationId);
-          console.log('Connections: Fetched conversation messages (raw):', conversationMessages);
-
-          const mappedConversation = Array.isArray(conversationMessages)
-            ? conversationMessages.map(msg => ({
-                id: msg.id,
-                sender: msg.fromUserId === currentUser.uid ? 'currentUser' : 'otherUser',
-                content: msg.content,
-                timestamp: msg.createdAt?.toDate ? msg.createdAt.toDate().toISOString() : new Date().toISOString()
-              }))
-            : [];
-          
-          console.log('Connections: Mapped conversation (before setting state):', mappedConversation);
-
-          const newSelectedConversation = { 
-            id: acceptedInvitation.id, 
+          const newConversation = {
+            id: acceptedInvitation.id,
             otherUser: otherUser,
-            postTitle: acceptedInvitation.postTitle,
-            conversation: Array.isArray(mappedConversation) ? mappedConversation : [],
-            lastMessage: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].content : '',
-            lastMessageTime: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].timestamp : new Date().toISOString()
+            postTitle: `Bài đăng ${acceptedInvitation.postId}`, // Placeholder
+            lastMessage: acceptedInvitation.message, // Initial message
+            lastMessageTime: new Date().toISOString(),
+            unread: false,
+            conversation: [{ // Initial message in conversation
+              id: Date.now().toString(),
+              senderId: acceptedInvitation.senderId, // Use senderId for consistency with actual messages
+              content: acceptedInvitation.message,
+              timestamp: acceptedInvitation.createdAt,
+            }]
           };
-
-          setSelectedConversation(newSelectedConversation); 
-          console.log('Connections: selectedConversation state set to:', newSelectedConversation); 
-
+          setMessages((prev) => [...prev, newConversation]);
+          setSelectedConversation(newConversation);
           setActiveTab('messages');
         }
-      } else {
-        await declineConnection(invitationId);
       }
-
-      const updatedInvitations = [...sentInvitations, ...receivedInvitations].map(inv => {
-        if (inv.id === invitationId) {
-          return {
-            ...inv,
-            status: response === 'accept' ? 'accepted' : 'declined'
-          };
-        }
-        return inv;
-      });
-      
-      setSentInvitations(updatedInvitations.filter(inv => inv.type === 'sent'));
-      setReceivedInvitations(updatedInvitations.filter(inv => inv.type === 'received'));
     } catch (error) {
       console.error('Error responding to invitation:', error);
-      alert('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại.');
     }
   };
 
@@ -482,13 +521,13 @@ function Connections() {
                             <div className="flex items-start space-x-4">
                               <img
                                 src={inv.fromUser?.avatar || 'https://via.placeholder.com/48'}
-                                alt={inv.fromUser?.name || 'Người dùng'}
+                                alt={inv.fromUser?.fullName || 'Người dùng'}
                                 className="w-12 h-12 rounded-full object-cover"
                               />
                               <div>
-                                <div className="font-semibold">{inv.fromUser?.name || 'Người gửi'}</div>
+                                <div className="font-semibold">{inv.fromUser?.fullName || 'Người gửi'}</div>
                                 <div className="text-sm text-gray-600">{inv.postTitle}</div>
-                                <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
+                                <div className="text-xs text-gray-400">{formatTime(inv.createdAt)}</div>
                                 <div className="text-sm mt-1">{inv.message}</div>
                               </div>
                             </div>
@@ -512,9 +551,9 @@ function Connections() {
                         sentInvitations.map(inv => (
                           <div key={inv.id} className="border rounded-lg p-4 flex items-center justify-between">
                             <div>
-                              <div className="font-semibold">{inv.toUser?.name || 'Người nhận'}</div>
+                              <div className="font-semibold">{inv.toUser?.fullName || 'Người nhận'}</div>
                               <div className="text-sm text-gray-600">{inv.postTitle}</div>
-                              <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
+                              <div className="text-xs text-gray-400">{formatTime(inv.createdAt)}</div>
                               <div className="text-sm mt-1">{inv.message}</div>
                             </div>
                             <div>
@@ -640,12 +679,12 @@ function Connections() {
               <div className="flex items-center space-x-3">
                 <img
                   src={selectedConversation.otherUser.avatar || 'https://via.placeholder.com/48'}
-                  alt={selectedConversation.otherUser.name || 'Người dùng'}
+                  alt={selectedConversation.otherUser.fullName || 'Người dùng'}
                   className="w-10 h-10 rounded-full"
                 />
                 <div>
                   <h3 className="font-semibold">
-                    {selectedConversation.otherUser.name || 'Người dùng'}
+                    {selectedConversation.otherUser.fullName || 'Người dùng'}
                   </h3>
                   <p className="text-sm text-gray-600">
                     {selectedConversation.postTitle}
@@ -663,15 +702,15 @@ function Connections() {
             <div className="h-96 overflow-y-auto p-4 space-y-4">
               {selectedConversation.conversation && selectedConversation.conversation.length > 0 ? (
                 selectedConversation.conversation.map(msg => (
-                  <div key={msg.id} className={`flex ${msg.sender === 'currentUser' ? 'justify-end' : 'justify-start'}`}>
+                  <div key={msg.id} className={`flex ${msg.senderId === currentUser.id ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      msg.sender === 'currentUser' 
+                      msg.senderId === currentUser.id 
                         ? 'bg-blue-600 text-white' 
                         : 'bg-gray-200 text-gray-900'
                     }`}>
                       <p className="text-sm">{msg.content}</p>
                       <p className={`text-xs mt-1 ${
-                        msg.sender === 'currentUser' 
+                        msg.senderId === currentUser.id 
                           ? 'text-blue-100' 
                           : 'text-gray-500'
                       }`}>

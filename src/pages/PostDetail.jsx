@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ConnectionModal from '../components/ConnectionModal';
@@ -8,7 +8,6 @@ import {
   Heart,
   Eye,
   Share2,
-  MessageCircle,
   Phone,
   ArrowLeft,
   CheckCircle,
@@ -30,62 +29,20 @@ function PostDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  const currentUser = {
-    uid: 'demo-user-id', // This ID should match an ID in your db.json users array
-    email: 'demo@test.com',
-    displayName: 'Demo User',
-    id: 'user1' // Ensure this ID matches a user in db.json for currentUser checks
-  };
+  const currentUser = useState(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    return storedUser ? JSON.parse(storedUser) : null;
+  })[0];
 
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showImageModal, setShowImageModal] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactMessage, setContactMessage] = useState('');
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [authorInfo, setAuthorInfo] = useState(null);
 
-  // Helper to map amenities for display for room_listing posts
-  const roomListingAmenitiesLabels = {
-    "Máy lạnh": 'Máy lạnh',
-    "Wifi": 'Wifi',
-    "Giường": 'Giường',
-    "Tủ quần áo": 'Tủ quần áo',
-    "Bàn học": 'Bàn học',
-    "Tủ lạnh": 'Tủ lạnh',
-    "Máy giặt": 'Máy giặt',
-    "Bếp": 'Bếp',
-    "Ban công": 'Ban công',
-    "Thang máy": 'Thang máy',
-    "Sân vườn": 'Sân vườn',
-    "Bãi đậu xe": 'Bãi đậu xe',
-    "An ninh 24/7": 'An ninh 24/7'
-  };
-
-  const roomListingAmenitiesIcons = {
-    "Máy lạnh": <Snowflake size={16} />,
-    "Wifi": <Wifi size={16} />,
-    "Giường": <Home size={16} />, // Generic home icon for furniture
-    "Tủ quần áo": <Shirt size={16} />,
-    "Bàn học": <Home size={16} />, // Generic home icon for furniture
-    "Tủ lạnh": <Home size={16} />, // Generic home icon for appliance
-    "Máy giặt": <Home size={16} />, // Generic home icon for appliance
-    "Bếp": <Coffee size={16} />,
-    "Ban công": <Home size={16} />, // Generic home icon
-    "Thang máy": <Home size={16} />, // Generic home icon
-    "Sân vườn": <Home size={16} />, // Generic home icon
-    "Bãi đậu xe": <Car size={16} />,
-    "An ninh 24/7": <CheckCircle size={16} />
-  };
-
-  useEffect(() => {
-    fetchPost();
-  }, [id]);
-
-  const fetchPost = async () => {
+  const fetchPost = useCallback(async () => {
     setLoading(true);
     try {
       if (!id) {
@@ -123,6 +80,44 @@ function PostDetail() {
     } finally {
       setLoading(false);
     }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchPost();
+  }, [id, navigate, fetchPost]);
+
+
+  // Helper to map amenities for display for room_listing posts
+  const roomListingAmenitiesLabels = {
+    "Máy lạnh": 'Máy lạnh',
+    "Wifi": 'Wifi',
+    "Giường": 'Giường',
+    "Tủ quần áo": 'Tủ quần áo',
+    "Bàn học": 'Bàn học',
+    "Tủ lạnh": 'Tủ lạnh',
+    "Máy giặt": 'Máy giặt',
+    "Bếp": 'Bếp',
+    "Ban công": 'Ban công',
+    "Thang máy": 'Thang máy',
+    "Sân vườn": 'Sân vườn',
+    "Bãi đậu xe": 'Bãi đậu xe',
+    "An ninh 24/7": 'An ninh 24/7'
+  };
+
+  const roomListingAmenitiesIcons = {
+    "Máy lạnh": <Snowflake size={16} />,
+    "Wifi": <Wifi size={16} />,
+    "Giường": <Home size={16} />, // Generic home icon for furniture
+    "Tủ quần áo": <Shirt size={16} />,
+    "Bàn học": <Home size={16} />, // Generic home icon for furniture
+    "Tủ lạnh": <Home size={16} />, // Generic home icon for appliance
+    "Máy giặt": <Home size={16} />, // Generic home icon for appliance
+    "Bếp": <Coffee size={16} />,
+    "Ban công": <Home size={16} />, // Generic home icon
+    "Thang máy": <Home size={16} />, // Generic home icon
+    "Sân vườn": <Home size={16} />, // Generic home icon
+    "Bãi đậu xe": <Car size={16} />,
+    "An ninh 24/7": <CheckCircle size={16} />
   };
 
   const handleShare = async () => {
@@ -142,38 +137,6 @@ function PostDetail() {
     }
   };
 
-  const handleContact = async () => {
-    if (!currentUser) {
-      navigate('/login');
-      return;
-    }
-    
-    if (currentUser?.uid === authorInfo?.id) { 
-      alert('Đây là bài đăng của bạn!');
-      return;
-    }
-    
-    setShowContactModal(true);
-  };
-
-  const sendMessage = async () => {
-    if (!contactMessage.trim()) return;
-    
-    setSendingMessage(true);
-    
-    setTimeout(() => {
-      console.log('Sending message:', {
-        to: authorInfo?.id, 
-        message: contactMessage,
-        postId: post.id
-      });
-      
-      setSendingMessage(false);
-      setShowContactModal(false);
-      setContactMessage('');
-      alert('Tin nhắn đã được gửi!');
-    }, 1000);
-  };
 
   const toggleFavorite = () => {
     setIsFavorite(!isFavorite);
@@ -520,42 +483,29 @@ function PostDetail() {
               </div>
             </div>
             
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tỷ lệ phản hồi:</span>
-                <span className="font-medium">{authorInfo?.responseRate || 'N/A'}%</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="font-medium">{authorInfo?.responseTime || 'N/A'}</span>
-              </div>
-            </div>
             
             <div className="space-y-3">
-              <button
-                onClick={handleContact}
-                className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 flex items-center justify-center space-x-2"
-              >
-                <MessageCircle size={20} />
-                <span>Gửi tin nhắn</span>
-              </button>
-              
-              {currentUser && currentUser.uid !== authorInfo?.id && (
-                <button
-                  onClick={() => setShowConnectionModal(true)}
-                  className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
-                >
-                  <UserPlus size={20} />
-                  <span>Gửi lời mời kết nối</span>
-                </button>
+              {currentUser && currentUser.uid !== authorInfo?.id ? (
+                <>
+                  <button
+                    onClick={() => setShowConnectionModal(true)}
+                    className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
+                  >
+                    <UserPlus size={20} />
+                    <span>Gửi lời mời kết nối</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => window.location.href = `tel:${authorInfo.phone}`}
+                    className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
+                  >
+                    <Phone size={20} />
+                    <span>Gọi điện</span>
+                  </button>
+                </>
+              ) : (
+                <p className="text-center text-gray-500">Đây là bài đăng của bạn.</p>
               )}
-              
-              <button
-                onClick={() => window.location.href = `tel:${authorInfo.phone}`}
-                className="w-full bg-green-600 text-white py-3 rounded-md hover:bg-green-700 flex items-center justify-center space-x-2"
-              >
-                <Phone size={20} />
-                <span>Gọi điện</span>
-              </button>
             </div>
           </div>
           
@@ -625,52 +575,6 @@ function PostDetail() {
         </div>
       )}
       
-      {/* Contact Modal */}
-      {showContactModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Gửi tin nhắn</h3>
-              <button
-                onClick={() => setShowContactModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tin nhắn cho {authorInfo?.fullName || 'Người dùng'}
-              </label>
-              <textarea
-                value={contactMessage}
-                onChange={(e) => setContactMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={4}
-                placeholder="Xin chào, tôi quan tâm đến bài đăng của bạn..."
-              />
-            </div>
-            
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowContactModal(false)}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-md hover:bg-gray-300"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={sendMessage}
-                disabled={!contactMessage.trim() || sendingMessage}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {sendingMessage ? 'Đang gửi...' : 'Gửi tin nhắn'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Connection Modal */}
       {showConnectionModal && (
         <ConnectionModal
@@ -684,6 +588,7 @@ function PostDetail() {
             school: authorInfo?.school || '',
             major: authorInfo?.major || ''
           }}
+          currentUser={currentUser} // Pass currentUser to ConnectionModal
         />
       )}
     </div>

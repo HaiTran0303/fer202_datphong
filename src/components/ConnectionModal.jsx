@@ -1,9 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Send, User, MessageCircle, Heart } from 'lucide-react';
-function ConnectionModal({ isOpen, onClose, post, targetUser }) {
+import { useSocket } from '../hooks/useSocket'; // Import useSocket hook
+
+function ConnectionModal({ isOpen, onClose, post, targetUser, currentUser }) { // Add currentUser prop
+  const { socket } = useSocket(); // Use the socket hook
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (socket) {
+      socket.on('connectionRequestSent', (data) => {
+        console.log('Connection request sent successfully:', data);
+        setIsLoading(false);
+        onClose();
+        alert('Đã gửi lời mời kết nối thành công!');
+      });
+
+      socket.on('connectionRequestFailed', (errorMsg) => {
+        console.error('Connection request failed:', errorMsg);
+        setError(errorMsg);
+        setIsLoading(false);
+      });
+
+      // Clean up socket listeners on unmount
+      return () => {
+        socket.off('connectionRequestSent');
+        socket.off('connectionRequestFailed');
+      };
+    }
+  }, [socket, onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -13,33 +39,28 @@ function ConnectionModal({ isOpen, onClose, post, targetUser }) {
       return;
     }
 
-    // Simulate sending connection request
+    if (!socket) {
+      setError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
-      // In a real application, you would send this data to your backend
-      console.log('Simulating sending connection request:', {
-        fromUser: 'current_user_id', // Replace with actual current user ID
-        toUser: targetUser?.uid,
+      const requestData = {
+        senderId: currentUser.id, // Use current user's ID
+        receiverId: targetUser?.uid,
         postId: post.id,
         message: message.trim(),
-      });
-
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Reset form
-      setMessage('');
-      onClose();
+      };
       
-      // Show success message
-      alert('Đã gửi lời mời kết nối thành công!');
-      
-    } catch (error) {
-      console.error('Error sending connection request:', error);
+      console.log('Emitting sendConnectionRequest:', requestData);
+      socket.emit('sendConnectionRequest', requestData); // Emit socket event
+
+    } catch (err) {
+      console.error('Error emitting connection request:', err);
       setError('Có lỗi xảy ra khi gửi lời mời. Vui lòng thử lại.');
-    } finally {
       setIsLoading(false);
     }
   };

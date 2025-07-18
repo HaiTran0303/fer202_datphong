@@ -20,12 +20,21 @@ import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import PostManagement from './pages/PostManagement';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useState } from 'react'; // Import useState
+import { useState, useEffect } from 'react'; // Import useState and useEffect
 import Blog from './pages/Blog'; // Import Blog component
 import './App.css';
+import { SocketProvider } from './context/SocketContext';
 
 function App() {
   const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // Global search term state
+  const [currentUser, setCurrentUser] = useState(null); // Current user state
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []); // Run once on mount
 
   const handleGlobalSearchSubmit = (term) => {
     setGlobalSearchTerm(term);
@@ -35,11 +44,12 @@ function App() {
     <ErrorBoundary>
       {/* AuthProvider removed as per user request */}
       <DemoModal />
-      <Router>
-        <Routes>
-          {/* Auth Routes - without Layout */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+      <SocketProvider currentUser={currentUser}> {/* Wrap the entire application with SocketProvider */}
+        <Router>
+          <Routes>
+            {/* Auth Routes - without Layout */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
           
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -87,8 +97,9 @@ function App() {
               </Routes>
             </Layout>
           } />
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </SocketProvider> {/* Close SocketProvider */}
     </ErrorBoundary>
   );
 }

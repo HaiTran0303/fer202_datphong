@@ -74,7 +74,7 @@
         "email": "mai@example.com"
       },
       "address": "346 Phạm Văn Bạch, Phường 15, Quận Tân Bình, TP.HCM",
-      "userId": "user2",
+      "userId": "user1",
       "featured": true,
       "rating": 5,
       "views": 189,
@@ -115,7 +115,7 @@
         "email": "tuan@example.com"
       },
       "address": "24 Sơn Kỳ, Phường Sơn Kỳ, Quận Tân Phú, TP.HCM",
-      "userId": "user3",
+      "userId": "user1",
       "featured": false,
       "rating": 4,
       "views": 156,
@@ -161,7 +161,7 @@
         "email": "linh@example.com"
       },
       "address": "Phường Tân Hưng, Quận 7, TP.HCM",
-      "userId": "user4",
+      "userId": "user1",
       "featured": true,
       "rating": 5,
       "views": 312,
@@ -185,6 +185,7 @@
       "amenities": [
         "Máy lạnh",
         "Ban công",
+        "Thang máy",
         "Wifi",
         "Giường",
         "Tủ quần áo",
@@ -203,7 +204,7 @@
         "email": "duc@example.com"
       },
       "address": "656 Quang Trung, Phường 11, Quận Gò Vấp, TP.HCM",
-      "userId": "user5",
+      "userId": "user1",
       "featured": false,
       "rating": 4,
       "views": 198,
@@ -241,7 +242,7 @@
         "email": "huong@example.com"
       },
       "address": "Phường Bách Khoa, Quận Hai Bà Trưng, Hà Nội",
-      "userId": "user6",
+      "userId": "user1",
       "featured": false,
       "rating": 4,
       "views": 123,
@@ -288,7 +289,7 @@
         "email": "nam@example.com"
       },
       "address": "Phường Mỹ An, Quận Ngũ Hành Sơn, Đà Nẵng",
-      "userId": "user7",
+      "userId": "user1",
       "featured": true,
       "rating": 5,
       "views": 456,
@@ -326,7 +327,7 @@
         "email": "hai@example.com"
       },
       "address": "Phường Xuân Khánh, Quận Ninh Kiều, Cần Thơ",
-      "userId": "user8",
+      "userId": "user1",
       "featured": false,
       "rating": 4,
       "views": 234,
@@ -694,8 +695,30 @@
       "creationTime": "2025-07-17T12:46:24.260Z"
     }
   ],
-  "connections": [],
+  "connections": [
+    {
+      "status": "accepted",
+      "id": "1752864676230"
+    }
+  ],
   "messages": [],
-  "notifications": [],
+  "notifications": [
+    {
+      "id": "1752864676236-notify",
+      "userId": "user1",
+      "type": "connection_request",
+      "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
+      "isRead": false,
+      "createdAt": "2025-07-18T18:51:16.236Z",
+      "relatedEntity": {
+        "type": "connection",
+        "id": "1752864676230"
+      },
+      "fromUser": {
+        "id": "74ad",
+        "fullName": "Trần Hoàng Hải"
+      }
+    }
+  ],
   "settings": []
 }
