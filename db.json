@@ -699,9 +699,45 @@
     {
       "status": "accepted",
       "id": "1752864676230"
+    },
+    {
+      "status": "accepted",
+      "id": "1752891023851"
+    },
+    {
+      "id": "1752891604011",
+      "senderId": "74ad",
+      "receiverId": "user1",
+      "postId": "1",
+      "message": "adadadad",
+      "status": "pending",
+      "createdAt": "2025-07-19T02:20:04.011Z",
+      "rejectionCount": 0
     }
   ],
-  "messages": [],
+  "messages": [
+    {
+      "id": "1752891034938",
+      "conversationId": "1752891023851",
+      "senderId": "user1",
+      "content": "addadad",
+      "timestamp": "2025-07-19T02:10:34.937Z"
+    },
+    {
+      "id": "1752893480533",
+      "conversationId": "1752891023851",
+      "senderId": "user1",
+      "content": "dâd",
+      "timestamp": "2025-07-19T02:51:20.533Z"
+    },
+    {
+      "id": "1752893490634",
+      "conversationId": "1752891023851",
+      "senderId": "74ad",
+      "content": "dâda",
+      "timestamp": "2025-07-19T02:51:30.635Z"
+    }
+  ],
   "notifications": [
     {
       "id": "1752864676236-notify",
@@ -713,6 +749,38 @@
       "relatedEntity": {
         "type": "connection",
         "id": "1752864676230"
+      },
+      "fromUser": {
+        "id": "74ad",
+        "fullName": "Trần Hoàng Hải"
+      }
+    },
+    {
+      "id": "1752891023859-notify",
+      "userId": "user1",
+      "type": "connection_request",
+      "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
+      "isRead": true,
+      "createdAt": "2025-07-19T02:10:23.859Z",
+      "relatedEntity": {
+        "type": "connection",
+        "id": "1752891023851"
+      },
+      "fromUser": {
+        "id": "74ad",
+        "fullName": "Trần Hoàng Hải"
+      }
+    },
+    {
+      "id": "1752891604016-notify",
+      "userId": "user1",
+      "type": "connection_request",
+      "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
+      "isRead": true,
+      "createdAt": "2025-07-19T02:20:04.016Z",
+      "relatedEntity": {
+        "type": "connection",
+        "id": "1752891604011"
       },
       "fromUser": {
         "id": "74ad",

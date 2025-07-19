@@ -2,11 +2,11 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import axios from 'axios'; // Import axios to talk to json-server
 
-// Get __dirname equivalent in ES modules - Test comment
+// Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -16,7 +16,7 @@ const server = http.createServer(app);
 // Use CORS middleware
 app.use(cors({
   origin: 'http://localhost:5173', // Updated to Vite's default client origin
-  methods: ['GET', 'POST', 'PUT', 'DELETE'] // Allow more methods for API
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] // Allow more methods for API
 }));
 
 // Middleware to parse JSON bodies
@@ -30,11 +30,12 @@ const io = new Server(server, {
 });
 
 const SOCKET_PORT = process.env.SOCKET_PORT || 3002;
-const API_PORT = process.env.API_PORT || 3001; // For API endpoints
+const JSON_SERVER_URL = 'http://localhost:3001'; // JSON Server runs on this port
 
+// Helper functions to read/write db.json are no longer needed for direct file access
+// They will be replaced by axios calls to JSON_SERVER_URL
+/*
 const DB_PATH = path.join(__dirname, '../db.json');
-
-// Helper function to read db.json
 const readDb = () => {
   try {
     const data = fs.readFileSync(DB_PATH, 'utf8');
@@ -44,8 +45,6 @@ const readDb = () => {
     return { posts: [], users: [], connections: [], messages: [], notifications: [], settings: [], blogs: [], constants: {} };
   }
 };
-
-// Helper function to write to db.json
 const writeDb = (data) => {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf8');
@@ -53,6 +52,7 @@ const writeDb = (data) => {
     console.error('Error writing to db.json:', error);
   }
 };
+*/
 
 const usersMap = new Map(); // userId -> socketId mapping
 
@@ -75,24 +75,27 @@ io.on('connection', (socket) => {
     console.log(`User ${socket.id} left room: ${roomName}`);
   });
 
-  socket.on('sendMessage', (data) => {
-    const db = readDb(); // Read db here as we need to write to it
-    const { conversationId, message, senderId, time } = data; // Destructure all data sent from client
+  socket.on('sendMessage', async (data) => {
+    const { conversationId, senderId, content, timestamp } = data;
     const newMessage = {
       id: Date.now().toString(),
       conversationId: conversationId,
       senderId: senderId,
-      content: message,
-      timestamp: time || new Date().toLocaleTimeString(), // Use provided time or generate
+      content: content,
+      timestamp: timestamp, 
     };
-    db.messages.push(newMessage); // Store messages in db.json
-    writeDb(db); // Write to db.json
-    // Emit message to all clients in the conversation room, including the sender
-    io.to(conversationId).emit('receiveMessage', newMessage); 
+    try {
+      // Save message to json-server
+      await axios.post(`${JSON_SERVER_URL}/messages`, newMessage);
+      // Emit message to all clients in the conversation room, including the sender
+      io.to(conversationId).emit('receiveMessage', newMessage); 
+    } catch (error) {
+      console.error('Error sending message via socket:', error.response?.data || error.message);
+      socket.emit('sendMessageFailed', 'Failed to send message.');
+    }
   });
 
-  socket.on('sendConnectionRequest', (data) => {
-    const db = readDb();
+  socket.on('sendConnectionRequest', async (data) => {
     const { senderId, receiverId, postId, message } = data;
 
     // Basic validation
@@ -101,76 +104,78 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Check if a connection request already exists or if they are already connected
-    const existingConnection = db.connections.find(
-      conn => (conn.senderId === senderId && conn.receiverId === receiverId && conn.postId === postId) ||
-              (conn.senderId === receiverId && conn.receiverId === senderId && conn.postId === postId && conn.status === 'accepted')
-    );
+    try {
+      // Check if a connection request already exists or if they are already connected
+      const existingConnections = await axios.get(`${JSON_SERVER_URL}/connections?senderId=${senderId}&receiverId=${receiverId}&postId=${postId}`);
+      const existingConnection = existingConnections.data.find(
+        conn => (conn.senderId === senderId && conn.receiverId === receiverId && conn.postId === postId) ||
+                (conn.senderId === receiverId && conn.receiverId === senderId && conn.postId === postId && conn.status === 'accepted')
+      );
 
-    if (existingConnection) {
-      socket.emit('connectionRequestFailed', 'Yêu cầu kết nối đã tồn tại hoặc đã được kết nối.');
-      return;
-    }
-
-    // Check rejection count if sender has been rejected 3 times for this post
-    const rejectionCount = db.connections.filter(
-      conn => conn.senderId === senderId && conn.receiverId === receiverId && conn.postId === postId && conn.status === 'rejected'
-    ).length;
-
-    if (rejectionCount >= 3) {
-      socket.emit('connectionRequestFailed', 'Bạn đã bị từ chối 3 lần cho bài đăng này và không thể gửi thêm yêu cầu.');
-      return;
-    }
-
-    const newConnection = {
-      id: Date.now().toString(), // Simple unique ID
-      senderId: senderId, // Ensure senderId is explicitly set
-      receiverId: receiverId, // Ensure receiverId is explicitly set
-      postId,
-      message,
-      status: 'pending', // pending, accepted, rejected
-      createdAt: new Date().toISOString(),
-      rejectionCount: 0 // Initialize rejection count for new requests
-    };
-    console.log('Server: newConnection object being saved:', newConnection); // NEW LOG
-
-    db.connections.push(newConnection);
-    console.log('Server: Before writing db.json (connections post):', db.connections); // NEW LOG
-    writeDb(db);
-    console.log('Server: After writing db.json (connections post).'); // NEW LOG
-
-    // Notify receiver
-    const receiverSocketId = usersMap.get(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit('newConnectionRequest', newConnection);
-    }
-    
-    socket.emit('connectionRequestSent', newConnection);
-
-    // Create a notification for the receiver
-    const senderUser = db.users.find(u => u.id === senderId);
-    console.log('Sender User for Notification:', senderUser); // Add this line for debugging
-    const notification = {
-      id: Date.now().toString() + '-notify',
-      userId: receiverId,
-      type: 'connection_request',
-      message: `${senderUser?.fullName || 'Người dùng'} đã gửi lời mời kết nối`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      relatedEntity: {
-        type: 'connection',
-        id: newConnection.id
-      },
-      fromUser: { // Include sender's info directly
-        id: senderUser?.id,
-        fullName: senderUser?.fullName,
-        avatar: senderUser?.avatar // Assuming avatar is available on user object
+      if (existingConnection) {
+        socket.emit('connectionRequestFailed', 'Yêu cầu kết nối đã tồn tại hoặc đã được kết nối.');
+        return;
       }
-    };
-    db.notifications.push(notification);
-    writeDb(db);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit('newNotification', notification); // Emit notification to receiver
+
+      // Check rejection count if sender has been rejected 3 times for this post
+      const rejectedConnections = await axios.get(`${JSON_SERVER_URL}/connections?senderId=${senderId}&receiverId=${receiverId}&postId=${postId}&status=rejected`);
+      const rejectionCount = rejectedConnections.data.length;
+
+      if (rejectionCount >= 3) {
+        socket.emit('connectionRequestFailed', 'Bạn đã bị từ chối 3 lần cho bài đăng này và không thể gửi thêm yêu cầu.');
+        return;
+      }
+
+      const newConnection = {
+        id: Date.now().toString(), // Simple unique ID
+        senderId: senderId, // Ensure senderId is explicitly set
+        receiverId: receiverId, // Ensure receiverId is explicitly set
+        postId,
+        message,
+        status: 'pending', // pending, accepted, rejected
+        createdAt: new Date().toISOString(),
+        rejectionCount: 0 // Initialize rejection count for new requests
+      };
+      
+      // Save new connection to json-server
+      const savedConnection = await axios.post(`${JSON_SERVER_URL}/connections`, newConnection);
+
+      // Create a notification for the receiver
+      const senderUserRes = await axios.get(`${JSON_SERVER_URL}/users/${senderId}`);
+      const senderUser = senderUserRes.data;
+      
+      const notification = {
+        id: Date.now().toString() + '-notify',
+        userId: receiverId,
+        type: 'connection_request',
+        message: `${senderUser?.fullName || 'Người dùng'} đã gửi lời mời kết nối`,
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        relatedEntity: {
+          type: 'connection',
+          id: savedConnection.data.id // Use ID from saved connection
+        },
+        fromUser: { // Include sender's info directly
+          id: senderUser?.id,
+          fullName: senderUser?.fullName,
+          avatar: senderUser?.avatar // Assuming avatar is available on user object
+        }
+      };
+      // Save notification to json-server
+      await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
+
+      // Notify receiver via socket
+      const receiverSocketId = usersMap.get(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('newConnectionRequest', savedConnection.data);
+        io.to(receiverSocketId).emit('newNotification', notification);
+      }
+      
+      socket.emit('connectionRequestSent', savedConnection.data);
+
+    } catch (error) {
+      console.error('Error sending connection request via socket:', error.response?.data || error.message);
+      socket.emit('connectionRequestFailed', 'Có lỗi xảy ra khi gửi lời mời. Vui lòng thử lại.');
     }
   });
 
@@ -181,233 +186,107 @@ io.on('connection', (socket) => {
       usersMap.delete(socket.userId);
     }
   });
-});
 
-// Generic API Endpoints for all resources in db.json
-app.get('/:resourceName', (req, res) => {
-  const db = readDb();
-  const resourceName = req.params.resourceName;
-  let data = db[resourceName];
+  // Handle connection status updates via socket
+  socket.on('updateConnectionStatus', async (data) => {
+    const { connectionId, status } = data;
+    try {
+      const connectionRes = await axios.get(`${JSON_SERVER_URL}/connections/${connectionId}`);
+      const connection = connectionRes.data;
 
-  if (!data) {
-    return res.status(404).json({ message: 'Resource not found' });
-  }
-
-  // Handle filtering by userId for notifications and connections
-  if (req.query.userId && (resourceName === 'notifications' || resourceName === 'connections')) {
-    data = data.filter(item => item.userId === req.query.userId || item.receiverId === req.query.userId || item.senderId === req.query.userId);
-  }
-
-  // Handle sorting
-  if (req.query._sort && req.query._order) {
-    const sortBy = req.query._sort;
-    const orderBy = req.query._order.toLowerCase(); // 'asc' or 'desc'
-    data.sort((a, b) => {
-      if (a[sortBy] < b[sortBy]) return orderBy === 'asc' ? -1 : 1;
-      if (a[sortBy] > b[sortBy]) return orderBy === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }
-
-  res.json(data);
-});
-
-// Generic API Endpoint for single resource by ID
-app.get('/:resourceName/:id', (req, res) => {
-  const db = readDb();
-  const resourceName = req.params.resourceName;
-  const id = req.params.id;
-  const data = db[resourceName];
-
-  if (!data) {
-    return res.status(404).json({ message: 'Resource not found' });
-  }
-
-  const item = data.find(item => item.id === id);
-
-  if (item) {
-    res.json(item);
-  } else {
-    res.status(404).json({ message: 'Item not found' });
-  }
-});
-
-// New API endpoint to get messages by conversationId
-app.get('/messages/:conversationId', (req, res) => {
-  const db = readDb();
-  const conversationId = req.params.conversationId;
-  console.log(`Fetching messages for conversationId: ${conversationId}`); // Add this log
-  const messages = db.messages.filter(msg => msg.conversationId === conversationId);
-  console.log(`Found ${messages.length} messages for conversationId: ${conversationId}`); // Add this log
-  res.json(messages);
-});
-
-// Specific API Endpoints (keep existing ones for POST/PUT/DELETE if they do more than generic)
-// connections POST and PUT are already specific, so they will override the generic ones for those methods.
-// messages GET is now handled by generic GET.
-// connections GET is now handled by generic GET.
-
-app.post('/connections', (req, res) => {
-  const db = readDb();
-  const { senderId, receiverId, postId, message } = req.body;
-
-  if (!senderId || !receiverId || !postId) {
-    return res.status(400).json({ message: 'Missing required fields.' });
-  }
-
-  // Check if a connection request already exists or if they are already connected
-  const existingConnection = db.connections.find(
-    conn => (conn.senderId === senderId && conn.receiverId === receiverId && conn.postId === postId) ||
-            (conn.senderId === receiverId && conn.receiverId === senderId && conn.postId === postId && conn.status === 'accepted')
-  );
-
-  if (existingConnection) {
-    return res.status(409).json({ message: 'Yêu cầu kết nối đã tồn tại hoặc đã được kết nối.' });
-  }
-
-  // Check rejection count if sender has been rejected 3 times for this post
-  const rejectionCount = db.connections.filter(
-    conn => conn.senderId === senderId && conn.receiverId === receiverId && conn.postId === postId && conn.status === 'rejected'
-  ).length;
-
-  if (rejectionCount >= 3) {
-    return res.status(403).json({ message: 'Bạn đã bị từ chối 3 lần cho bài đăng này và không thể gửi thêm yêu cầu.' });
-  }
-
-  const newConnection = {
-    id: Date.now().toString(),
-    senderId,
-    receiverId,
-    postId,
-    message,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    rejectionCount: 0
-  };
-
-  db.connections.push(newConnection);
-  writeDb(db);
-
-  // Notify receiver (if connected via socket) - this part is handled by socket event above, but good to have API for consistency
-  const senderUser = db.users.find(u => u.id === senderId);
-  const notification = {
-    id: Date.now().toString() + '-notify',
-    userId: receiverId,
-    type: 'connection_request',
-    message: `${senderUser?.fullName || 'Người dùng'} đã gửi lời mời kết nối`,
-    isRead: false,
-    createdAt: new Date().toISOString(),
-    relatedEntity: {
-      type: 'connection',
-      id: newConnection.id
-    }
-  };
-  db.notifications.push(notification);
-  writeDb(db);
-  const receiverSocketId = usersMap.get(receiverId);
-  if (receiverSocketId) {
-    io.to(receiverSocketId).emit('newNotification', notification);
-  }
-
-  res.status(201).json(newConnection);
-});
-
-app.put('/connections/:id', (req, res) => {
-  const db = readDb();
-  const { id } = req.params;
-  const { status } = req.body; // 'accepted' or 'rejected'
-  console.log(`Server: PUT /connections/${id} received with status: ${status}`); // NEW LOG
-
-  const connectionIndex = db.connections.findIndex(conn => conn.id === id);
-  console.log(`Server: connectionIndex for ID ${id}: ${connectionIndex}`); // NEW LOG
-
-  if (connectionIndex === -1) {
-    console.log(`Server: Connection with ID ${id} not found.`); // NEW LOG
-    return res.status(404).json({ message: 'Connection request not found.' });
-  }
-
-  const connection = db.connections[connectionIndex];
-
-  if (status === 'accepted') {
-    connection.status = 'accepted';
-
-    // Create the first message from the connection request message
-    const firstMessage = {
-      id: Date.now().toString() + '-first-msg',
-      conversationId: connection.id,
-      senderId: connection.senderId, // The sender of the connection request is the author of the first message
-      content: connection.message, // The message from the connection request
-      timestamp: new Date().toISOString(),
-    };
-    db.messages.push(firstMessage); // Save the first message to db.json
-
-    const receiverUser = db.users.find(u => u.id === connection.receiverId); // Get receiver user details
-    const notification = {
-      id: Date.now().toString() + '-notify-accept',
-      userId: connection.senderId, // Notification for the sender
-      type: 'connection_accepted',
-      message: `${receiverUser?.fullName || 'Người dùng'} đã chấp nhận lời mời kết nối của bạn`, // Message uses receiver's name
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      relatedEntity: {
-        type: 'connection',
-        id: connection.id,
-        conversationId: connection.id // Assuming connection.id can serve as conversationId
-      },
-      fromUser: { // Include receiver's info (the one who accepted)
-        id: receiverUser?.id,
-        fullName: receiverUser?.fullName,
-        avatar: receiverUser?.avatar
+      if (!connection) {
+        console.warn(`Connection with ID ${connectionId} not found for status update.`);
+        return;
       }
-    };
-    db.notifications.push(notification);
-    writeDb(db);
-    const senderSocketId = usersMap.get(connection.senderId);
-    if (senderSocketId) {
-      io.to(senderSocketId).emit('newNotification', notification); // Emit notification to sender
-      io.to(senderSocketId).emit('connectionAccepted', { ...connection, firstMessage }); // Send first message with connection
-    }
 
-  } else if (status === 'rejected') {
-    connection.status = 'rejected';
-    connection.rejectionCount = (connection.rejectionCount || 0) + 1; // Increment rejection count
-    
-    const senderUser = db.users.find(u => u.id === connection.senderId);
-    const notification = {
-      id: Date.now().toString() + '-notify-reject',
-      userId: connection.senderId,
-      type: 'connection_rejected',
-      message: `${senderUser?.fullName || 'Người dùng'} đã từ chối lời mời kết nối của bạn`,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      relatedEntity: {
-        type: 'connection',
-        id: connection.id
+      let updatedConnection = { ...connection, status: status };
+
+      if (status === 'accepted') {
+        const firstMessage = {
+          id: Date.now().toString() + '-first-msg',
+          conversationId: connection.id,
+          senderId: connection.senderId,
+          content: connection.message,
+          timestamp: new Date().toISOString(),
+        };
+        await axios.post(`${JSON_SERVER_URL}/messages`, firstMessage); // Save first message
+        updatedConnection.firstMessage = firstMessage; // Add to object for socket emit
+
+        // Create notification for sender
+        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.receiverId}`);
+        const receiverUser = receiverUserRes.data;
+        const notification = {
+          id: Date.now().toString() + '-notify-accept',
+          userId: connection.senderId,
+          type: 'connection_accepted',
+          message: `${receiverUser?.fullName || 'Người dùng'} đã chấp nhận lời mời kết nối của bạn`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          relatedEntity: { type: 'connection', id: connection.id },
+          fromUser: { id: receiverUser?.id, fullName: receiverUser?.fullName, avatar: receiverUser?.avatar }
+        };
+        await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
+        const senderSocketId = usersMap.get(connection.senderId);
+        if (senderSocketId) io.to(senderSocketId).emit('newNotification', notification);
+      } else if (status === 'rejected') {
+        updatedConnection.rejectionCount = (connection.rejectionCount || 0) + 1;
+        // Create notification for sender
+        const senderUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.senderId}`);
+        const senderUser = senderUserRes.data;
+        const notification = {
+          id: Date.now().toString() + '-notify-reject',
+          userId: connection.senderId,
+          type: 'connection_rejected',
+          message: `${senderUser?.fullName || 'Người dùng'} đã từ chối lời mời kết nối của bạn`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          relatedEntity: { type: 'connection', id: connection.id },
+          fromUser: { id: senderUser?.id, fullName: senderUser?.fullName, avatar: senderUser?.avatar }
+        };
+        await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
+        const senderSocketId = usersMap.get(connection.senderId);
+        if (senderSocketId) io.to(senderSocketId).emit('newNotification', notification);
+      } else if (status === 'cancelled') {
+        // Create notification for receiver
+        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.receiverId}`);
+        const receiverUser = receiverUserRes.data;
+        const notification = {
+          id: Date.now().toString() + '-notify-cancel',
+          userId: connection.receiverId,
+          type: 'connection_cancelled',
+          message: `${receiverUser?.fullName || 'Người dùng'} đã hủy lời mời kết nối`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+          relatedEntity: { type: 'connection', id: connection.id },
+          fromUser: { id: receiverUser?.id, fullName: receiverUser?.fullName, avatar: receiverUser?.avatar }
+        };
+        await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
+        const receiverSocketId = usersMap.get(connection.receiverId);
+        if (receiverSocketId) io.to(receiverSocketId).emit('newNotification', notification);
       }
-    };
-    db.notifications.push(notification);
-    writeDb(db);
-    const senderSocketId = usersMap.get(connection.senderId);
-    if (senderSocketId) {
-      io.to(senderSocketId).emit('newNotification', notification); // Emit notification to sender
-      // Optionally, emit a socket event to update the sender's UI immediately
-      io.to(senderSocketId).emit('connectionRejected', connection);
+
+      // Update connection status on json-server
+      await axios.patch(`${JSON_SERVER_URL}/connections/${connectionId}`, { status: updatedConnection.status, rejectionCount: updatedConnection.rejectionCount });
+
+      // Emit status update to both sender and receiver
+      const senderSocketId = usersMap.get(connection.senderId);
+      const receiverSocketId = usersMap.get(connection.receiverId);
+
+      if (status === 'accepted') {
+        if (senderSocketId) io.to(senderSocketId).emit('connectionAccepted', updatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionAccepted', updatedConnection);
+      } else if (status === 'rejected') {
+        if (senderSocketId) io.to(senderSocketId).emit('connectionRejected', updatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionRejected', updatedConnection);
+      } else if (status === 'cancelled') {
+        if (senderSocketId) io.to(senderSocketId).emit('connectionCancelled', updatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionCancelled', updatedConnection);
+      }
+    } catch (error) {
+      console.error('Error updating connection status via socket:', error.response?.data || error.message);
+      socket.emit('updateConnectionStatusFailed', 'Failed to update connection status.');
     }
-
-  } else {
-    return res.status(400).json({ message: 'Invalid status provided.' });
-  }
-
-  writeDb(db);
-  res.json(connection);
-});
-
-// Serve static files (if needed, e.g., for serving db.json directly or other assets)
-// app.use('/api', jsonServer.router(DB_PATH)); // If you want to keep json-server routing
-
-// The main API server will now run on port 3001
-app.listen(API_PORT, () => {
-  console.log(`API server listening on port ${API_PORT}`);
+  });
 });
 
 server.listen(SOCKET_PORT, () => {

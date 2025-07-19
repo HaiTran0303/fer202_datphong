@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { useSocket } from '../hooks/useSocket';
 import { 
   UserPlus, 
   Check, 
@@ -12,109 +14,138 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-// Mock data storage for connections
-let mockConnections = [];
 
-// Helper functions (copied from Connections.jsx)
-
-// Lấy danh sách lời mời đã gửi
-async function getSentConnections(userId) {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-  return mockConnections.filter(conn => conn.fromUserId === userId);
-}
-
-// Lấy danh sách lời mời đã nhận
-async function getReceivedConnections(userId) {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-  return mockConnections.filter(conn => conn.toUserId === userId);
-}
-
-// Chấp nhận lời mời kết nối
-async function acceptConnection(connectionId) {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-  const connectionIndex = mockConnections.findIndex(conn => conn.id === connectionId);
-  if (connectionIndex > -1) {
-    mockConnections[connectionIndex].status = 'accepted';
-    mockConnections[connectionIndex].updatedAt = new Date().toISOString();
-    return { success: true };
-  }
-  throw new Error('Connection not found');
-}
-
-// Từ chối lời mời kết nối
-async function declineConnection(connectionId) {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-  const connectionIndex = mockConnections.findIndex(conn => conn.id === connectionId);
-  if (connectionIndex > -1) {
-    mockConnections[connectionIndex].status = 'declined';
-    mockConnections[connectionIndex].updatedAt = new Date().toISOString();
-    return { success: true };
-  }
-  throw new Error('Connection not found');
-}
-
-// Hủy lời mời kết nối
-async function cancelConnection(connectionId) {
-  await new Promise(resolve => setTimeout(resolve, 300)); // Simulate API call
-  const initialLength = mockConnections.length;
-  mockConnections = mockConnections.filter(conn => conn.id !== connectionId);
-  if (mockConnections.length < initialLength) {
-    return { success: true };
-  }
-  throw new Error('Connection not found');
-}
+const API_BASE_URL = 'http://localhost:3001';
 
 function MyConnections() {
-  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
+  const [currentUser, setCurrentUser] = useState(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const { socket } = useSocket();
   const [activeTab, setActiveTab] = useState('received');
-  const [connections, setConnections] = useState([]);
+  const [connections, setConnections] = useState([]); // This will hold all relevant connections
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Add some mock connections for demonstration
-    if (mockConnections.length === 0) {
-      mockConnections.push({
-        id: 'conn1',
-        fromUserId: 'other-user-456',
-        toUserId: currentUser.uid,
-        postId: 'mock1',
-        message: 'Chào bạn, tôi thấy bài đăng của bạn rất phù hợp với tôi. Chúng ta có thể trò chuyện thêm không?',
-        status: 'pending',
-        createdAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-        fromUser: { uid: 'other-user-456', fullName: 'Nguyễn Văn A', avatar: 'https://via.placeholder.com/48' },
-        post: { id: 'mock1', title: 'Tìm bạn nữ ghép trọ quận 1' }
-      });
-      mockConnections.push({
-        id: 'conn2',
-        fromUserId: currentUser.uid,
-        toUserId: 'another-user-789',
-        postId: 'mock2',
-        message: 'Mình quan tâm đến phòng trọ ở Gò Vấp. Bạn có thể cho mình thêm thông tin không?',
-        status: 'pending',
-        createdAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
-        toUser: { uid: 'another-user-789', fullName: 'Trần Thị B', avatar: 'https://via.placeholder.com/48' },
-        post: { id: 'mock2', title: 'Nam tìm bạn cùng phòng gần ĐH Bách Khoa' }
-      });
-    }
-
-    if (currentUser) {
+    if (currentUser?.id) {
       fetchConnections();
     }
-  }, [currentUser, activeTab]);
+  }, [currentUser?.id, activeTab]); // Re-fetch when user or tab changes
+
+  useEffect(() => {
+    if (!socket || !currentUser?.id) return;
+
+    socket.on('connectionAccepted', (acceptedConnection) => {
+      console.log('MyConnections: Connection accepted via socket:', acceptedConnection);
+      // Update the local state for received invitations
+      setConnections(prev => prev.map(conn => 
+        conn.id === acceptedConnection.id ? { ...conn, status: 'accepted' } : conn
+      ));
+      // Optionally, add to messages list if this component also manages messages
+      // For now, just re-fetch to ensure consistency
+      fetchConnections();
+    });
+
+    socket.on('connectionRejected', (rejectedConnection) => {
+      console.log('MyConnections: Connection rejected via socket:', rejectedConnection);
+      setConnections(prev => prev.map(conn => 
+        conn.id === rejectedConnection.id ? { ...conn, status: 'rejected' } : conn
+      ));
+      // For now, just re-fetch to ensure consistency
+      fetchConnections();
+    });
+
+    return () => {
+      socket.off('connectionAccepted');
+      socket.off('connectionRejected');
+    };
+  }, [socket, currentUser]);
 
   const fetchConnections = async () => {
-    if (!currentUser) return;
-    
+    if (!currentUser?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      let data = [];
-      if (activeTab === 'received') {
-        data = await getReceivedConnections(currentUser.uid);
-      } else {
-        data = await getSentConnections(currentUser.uid);
-      }
-      setConnections(data);
+      // Fetch full currentUser details to ensure fullName and avatar are available
+      const fullCurrentUserRes = await axios.get(`${API_BASE_URL}/users/${currentUser.id}`);
+      const fullCurrentUser = fullCurrentUserRes.data;
+
+      // Fetch all connections relevant to the current user
+      const response = await axios.get(`${API_BASE_URL}/connections?senderId=${currentUser.id}&receiverId=${currentUser.id}_or`);
+      const allUserConnections = response.data;
+
+      const processedConnections = await Promise.all(allUserConnections.map(async (conn) => {
+        const isSender = conn.senderId === currentUser.id;
+        const otherUserId = isSender ? conn.receiverId : conn.senderId;
+        
+        let otherUser = null;
+        let postData = null;
+
+        try {
+          if (otherUserId) {
+            try {
+              const userRes = await axios.get(`${API_BASE_URL}/users/${otherUserId}`);
+              otherUser = userRes.data;
+            } catch (userError) {
+              console.warn(`Error fetching user ${otherUserId} for connection ${conn.id}:`, userError.message);
+              otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+            }
+          } else {
+            console.warn(`Missing otherUserId for connection ${conn.id}. Skipping user fetch.`);
+            otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+          }
+
+          if (conn.postId) {
+            try {
+              const postRes = await axios.get(`${API_BASE_URL}/posts/${conn.postId}`);
+              postData = postRes.data;
+            } catch (postError) {
+              console.warn(`Error fetching post ${conn.postId} for connection ${conn.id}:`, postError.message);
+              postData = { title: 'Bài đăng không xác định' }; // Fallback
+            }
+          } else {
+            console.warn(`Missing postId for connection ${conn.id}. Skipping post fetch.`);
+            postData = { title: 'Bài đăng không xác định' }; // Fallback
+          }
+
+          return {
+            ...conn,
+            fromUser: isSender ? fullCurrentUser : otherUser, // Use fullCurrentUser
+            toUser: isSender ? otherUser : fullCurrentUser,   // Use fullCurrentUser
+            post: postData,
+            type: isSender ? 'sent' : 'received'
+          };
+        } catch (error) {
+          console.error(`Error processing connection ${conn.id}:`, error);
+          if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error response status:', error.response.status);
+          }
+          // Return a partially processed connection or null to indicate an error
+          return {
+            ...conn,
+            fromUser: isSender ? fullCurrentUser : { fullName: 'Không xác định', avatar: '' }, // Provide fallback user info
+            toUser: isSender ? { fullName: 'Không xác định', avatar: '' } : fullCurrentUser,   // Provide fallback user info
+            post: { title: 'Bài đăng không xác định' }, // Provide fallback post info
+            type: isSender ? 'sent' : 'received',
+            error: true // Add an error flag
+          };
+        }
+      }));
+      // Filter out connections that had critical errors if needed, or handle them in rendering
+      setConnections(processedConnections.filter(conn => !conn.error)); // Filter out errored connections
+      // Sort by createdAt for consistent display
+      processedConnections.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setConnections(processedConnections);
+
     } catch (error) {
       console.error('Error fetching connections:', error);
     } finally {
@@ -124,14 +155,8 @@ function MyConnections() {
 
   const handleConnectionResponse = async (connectionId, response) => {
     try {
-      if (response === 'accept') {
-        await acceptConnection(connectionId);
-      } else {
-        await declineConnection(connectionId);
-      }
-
-      // Refresh connections
-      fetchConnections();
+      await axios.put(`${API_BASE_URL}/connections/${connectionId}`, { status: response === 'accept' ? 'accepted' : 'rejected' });
+      fetchConnections(); // Re-fetch to update the list
     } catch (error) {
       console.error('Error responding to connection:', error);
       alert('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại.');
@@ -140,7 +165,9 @@ function MyConnections() {
 
   const handleCancelConnection = async (connectionId) => {
     try {
-      await cancelConnection(connectionId);
+      // For simplicity, we'll change status to 'cancelled' instead of deleting
+      // A real app might have a DELETE endpoint or specific cancellation logic
+      await axios.put(`${API_BASE_URL}/connections/${connectionId}`, { status: 'cancelled' });
       fetchConnections();
     } catch (error) {
       console.error('Error cancelling connection:', error);
@@ -150,13 +177,24 @@ function MyConnections() {
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      return 'Ngày không hợp lệ'; // Handle invalid dates
+    }
     const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Vừa xong';
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInSeconds < 60) return 'Vừa xong';
+    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
     if (diffInHours < 24) return `${diffInHours} giờ trước`;
-    if (diffInHours < 48) return 'Hôm qua';
-    return date.toLocaleDateString('vi-VN');
+    if (diffInDays < 7) return `${diffInDays} ngày trước`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuần trước`;
+    if (diffInMonths < 12) return `${diffInMonths} tháng trước`;
+    return `${diffInYears} năm trước`;
   };
 
   const getStatusBadge = (status) => {
@@ -164,7 +202,7 @@ function MyConnections() {
       case 'pending':
         return (
           <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            Chờ phản hồi
+            Đang chờ
           </span>
         );
       case 'accepted':
@@ -173,10 +211,16 @@ function MyConnections() {
             Đã chấp nhận
           </span>
         );
-      case 'declined':
+      case 'rejected': // Changed from declined to rejected
         return (
           <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
             Đã từ chối
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            Đã hủy
           </span>
         );
       default:
@@ -186,8 +230,11 @@ function MyConnections() {
 
   const filteredConnections = connections.filter(conn => {
     const user = activeTab === 'received' ? conn.fromUser : conn.toUser;
-    return user?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           conn.post?.title?.toLowerCase().includes(searchTerm.toLowerCase());
+    const isRelevantTab = (activeTab === 'received' && conn.type === 'received') || (activeTab === 'sent' && conn.type === 'sent');
+    
+    return isRelevantTab && 
+           (user?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            conn.post?.title?.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
   if (!currentUser) {
@@ -290,16 +337,16 @@ function MyConnections() {
                   <div key={connection.id} className="border rounded-lg p-4">
                     <div className="flex items-start space-x-4">
                       <img
-                        src={user?.avatar || '/api/placeholder/40/40'}
+                        src={user?.avatar || 'https://avatars.dicebear.com/api/human/avatar.svg'}
                         alt={user?.fullName}
-                        className="w-12 h-12 rounded-full"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                       
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <h3 className="font-semibold text-gray-900">
-                              {user?.fullName || 'Người dùng'}
+                              {user?.fullName || 'Người dùng không xác định'}
                             </h3>
                             {user?.isVerified && (
                               <CheckCircle size={16} className="text-green-500" />
@@ -312,11 +359,11 @@ function MyConnections() {
                         </div>
                         
                         <div className="text-sm text-gray-600 mb-2">
-                          <p>{user?.school} - {user?.major}</p>
+                          <p>{user?.school || 'Không xác định'} - {user?.major || 'Không xác định'}</p>
                         </div>
                         
                         <p className="text-sm text-gray-600 mb-2">
-                          Về: {connection.post?.title || 'Bài đăng'}
+                          Về: {connection.post?.title || 'Bài đăng không xác định'}
                         </p>
                         
                         {connection.message && (
@@ -333,30 +380,43 @@ function MyConnections() {
                             Xem bài đăng
                           </Link>
                           
-                          {activeTab === 'received' && connection.status === 'pending' && (
+                          {connection.status === 'pending' && (
                             <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleConnectionResponse(connection.id, 'decline')}
-                                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm"
-                              >
-                                Từ chối
-                              </button>
-                              <button
-                                onClick={() => handleConnectionResponse(connection.id, 'accept')}
-                                className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
-                              >
-                                Chấp nhận
-                              </button>
+                              {activeTab === 'received' && (
+                                <>
+                                  <button
+                                    onClick={() => handleConnectionResponse(connection.id, 'decline')}
+                                    className="bg-gray-200 text-gray-800 px-3 py-1 rounded-md hover:bg-gray-300 text-sm"
+                                  >
+                                    Từ chối
+                                  </button>
+                                  <button
+                                    onClick={() => handleConnectionResponse(connection.id, 'accept')}
+                                    className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm"
+                                  >
+                                    Chấp nhận
+                                  </button>
+                                </>
+                              )}
+                              {activeTab === 'sent' && (
+                                <button
+                                  onClick={() => handleCancelConnection(connection.id)}
+                                  className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 text-sm"
+                                >
+                                  Hủy lời mời
+                                </button>
+                              )}
                             </div>
                           )}
                           
-                          {activeTab === 'sent' && connection.status === 'pending' && (
-                            <button
-                              onClick={() => handleCancelConnection(connection.id)}
-                              className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 text-sm"
+                          {connection.status === 'accepted' && (
+                            <Link
+                              to={`/connections?conversationId=${connection.id}`} // Link to the chat window
+                              className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm flex items-center space-x-1"
                             >
-                              Hủy lời mời
-                            </button>
+                              <MessageCircle size={16} />
+                              <span>Nhắn tin</span>
+                            </Link>
                           )}
                         </div>
                       </div>
