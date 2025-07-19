@@ -797,7 +797,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T12:42:48.895Z",
       "relatedEntity": {
         "type": "connection",
@@ -813,7 +813,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T13:52:21.238Z",
       "relatedEntity": {
         "type": "connection",
@@ -829,7 +829,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T13:55:28.471Z",
       "relatedEntity": {
         "type": "connection",
@@ -845,7 +845,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T13:59:16.594Z",
       "relatedEntity": {
         "type": "connection",
@@ -861,7 +861,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T13:59:47.458Z",
       "relatedEntity": {
         "type": "connection",
@@ -877,7 +877,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T14:02:48.471Z",
       "relatedEntity": {
         "type": "connection",
@@ -893,7 +893,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T14:04:58.412Z",
       "relatedEntity": {
         "type": "connection",
@@ -909,7 +909,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T14:08:34.929Z",
       "relatedEntity": {
         "type": "connection",
@@ -925,7 +925,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T14:17:11.724Z",
       "relatedEntity": {
         "type": "connection",
@@ -941,7 +941,7 @@
       "userId": "user1",
       "type": "connection_request",
       "message": "Trần Hoàng Hải đã gửi lời mời kết nối",
-      "isRead": false,
+      "isRead": true,
       "createdAt": "2025-07-19T14:19:37.557Z",
       "relatedEntity": {
         "type": "connection",

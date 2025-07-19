@@ -617,9 +617,9 @@ function Connections() {
                                 Xem cuộc trò chuyện
                               </button>
                               <span className="text-gray-300">•</span>
-                              {message.postId && (
+                              {message.conversationId && (
                                 <Link
-                                  to={`/post/${message.postId}`}
+                                  to={`/post/${message.conversationId}`}
                                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                                 >
                                   Xem bài đăng
