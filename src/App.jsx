@@ -15,17 +15,26 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import EditPost from './pages/EditPost';
 import ErrorBoundary from './components/ErrorBoundary';
-import DemoModal from './components/DemoModal';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import PostManagement from './pages/PostManagement';
 import ProtectedRoute from './components/ProtectedRoute';
-import { useState } from 'react'; // Import useState
+import { useState, useEffect } from 'react'; // Import useState and useEffect
 import Blog from './pages/Blog'; // Import Blog component
+import BlogDetail from './pages/BlogDetail'; // Import BlogDetail component
 import './App.css';
+import { SocketProvider } from './context/SocketContext';
 
 function App() {
   const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // Global search term state
+  const [currentUser, setCurrentUser] = useState(null); // Current user state
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []); // Run once on mount
 
   const handleGlobalSearchSubmit = (term) => {
     setGlobalSearchTerm(term);
@@ -34,18 +43,19 @@ function App() {
   return (
     <ErrorBoundary>
       {/* AuthProvider removed as per user request */}
-      <DemoModal />
-      <Router>
-        <Routes>
-          {/* Auth Routes - without Layout */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+      <SocketProvider currentUser={currentUser}> {/* Wrap the entire application with SocketProvider */}
+        <Router>
+          <Routes>
+            {/* Auth Routes - without Layout */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
           
           {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
             <Route path="/admin/users" element={<Layout><UserManagement /></Layout>} />
             <Route path="/admin/posts" element={<Layout><PostManagement /></Layout>} />
+            <Route path="/admin/blogs" element={<Layout><BlogManagement /></Layout>} />
           </Route>
 
           {/* App Routes - with Layout */}
@@ -70,13 +80,16 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/edit-post/:id" element={<EditPost />} />
                 
+                {/* Blog Routes */}
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetail />} />
+
                 {/* Category Routes */}
                 <Route path="/nha-nguyen-can" element={<Home />} />
                 <Route path="/can-ho-chung-cu" element={<Home />} />
                 <Route path="/can-ho-mini" element={<Home />} />
                 <Route path="/can-ho-dich-vu" element={<Home />} />
                 <Route path="/mat-bang" element={<Home />} />
-                <Route path="/blog" element={<Blog />} /> {/* Route /blog to Blog component */}
                 <Route path="/bang-gia" element={<Home />} />
                 
                 {/* Location Routes */}
@@ -87,8 +100,9 @@ function App() {
               </Routes>
             </Layout>
           } />
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </SocketProvider> {/* Close SocketProvider */}
     </ErrorBoundary>
   );
 }

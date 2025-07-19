@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  MessageCircle, 
-  UserPlus, 
-  Heart, 
-  Clock, 
-  Check, 
+import { Link, useSearchParams } from 'react-router-dom'; // Import useSearchParams
+import axios from 'axios';
+import { useSocket } from '../hooks/useSocket';
+import {
+  MessageCircle,
+  UserPlus,
+  Heart,
+  Clock,
+  Check,
   X,
   Send,
   Star,
@@ -18,250 +20,423 @@ import {
   Filter,
   Search
 } from 'lucide-react';
+import ChatWindow from '../components/ChatWindow'; // Import ChatWindow
 
-// Mock functions to replace Firebase calls
-async function getSentConnections(userId) {
-  console.log('Mock: getSentConnections called for userId:', userId);
-  return [];
-}
-
-async function getReceivedConnections(userId) {
-  console.log('Mock: getReceivedConnections called for userId:', userId);
-  return [];
-}
-
-async function getActiveConversations(userId) {
-  console.log('Mock: getActiveConversations called for userId:', userId);
-  return [];
-}
-
-async function sendMessage(connectionId, fromUserId, toUserId, content) {
-  console.log('Mock: sendMessage called:', { connectionId, fromUserId, toUserId, content });
-  return { id: `mock-msg-${Date.now()}`, connectionId, fromUserId, toUserId, content, createdAt: new Date().toISOString() };
-}
-
-async function acceptConnection(connectionId) {
-  console.log('Mock: acceptConnection called for connectionId:', connectionId);
-  return { success: true };
-}
-
-async function declineConnection(connectionId) {
-  console.log('Mock: declineConnection called for connectionId:', connectionId);
-  return { success: true };
-}
-
-async function getMessagesByConnectionId(connectionId) {
-  console.log('Mock: getMessagesByConnectionId called for connectionId:', connectionId);
-  return [];
-}
+const API_BASE_URL = 'http://localhost:3001'; // API server running on port 3001
 
 function Connections() {
-  // currentUser sẽ cần được cung cấp thông qua một cơ chế khác
-  // Tạm thời để trống hoặc gán giá trị mặc định để tránh lỗi
-  const currentUser = { uid: 'fake-uid-123', email: 'user@example.com', displayName: 'Example User', metadata: { creationTime: new Date().toISOString() } };
-  const [activeTab, setActiveTab] = useState('messages'); 
-  const [messages, setMessages] = useState([]); 
+  // Lấy currentUser từ localStorage một lần và lưu vào state
+  const [currentUser, setCurrentUser] = useState(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const { socket } = useSocket();
+  const [activeTab, setActiveTab] = useState('messages');
+  const [messages, setMessages] = useState([]);
   const [sentInvitations, setSentInvitations] = useState([]);
   const [receivedInvitations, setReceivedInvitations] = useState([]);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedConversation, setSelectedConversation] = useState({ conversation: [] });
-  const [newMessage, setNewMessage] = useState('');
+  const [selectedConversation, setSelectedConversation] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-
+  const [searchParams, setSearchParams] = useSearchParams();
   const [invitationTab, setInvitationTab] = useState('received');
 
+  // Effect to load currentUser from localStorage
   useEffect(() => {
-    fetchConnections();
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
 
-    // Setup real-time listener for connections/invitations (Mock - no-op)
-    // Removed Firebase specific real-time listeners and data fetching
-    // The data will be fetched once on component mount via fetchConnections
-    return () => {}; // Return a no-op cleanup function
-  }, [currentUser]); // Only re-run if currentUser changes
-
+  // Effect to fetch connections when currentUser or searchParams change
   useEffect(() => {
-    // Removed Firebase specific real-time listeners for messages
-    // Messages will be fetched once on conversation selection
-    return () => {}; // Return a no-op cleanup function
-  }, [selectedConversation?.id, currentUser]); // Re-run effect if selectedConversation.id or currentUser changes
+    if (currentUser?.id) {
+      fetchConnections();
+    }
+  }, [currentUser?.id, searchParams]); // Add searchParams as a dependency
+
+  // Effect to handle conversationId from URL
+  useEffect(() => {
+    const conversationIdFromUrl = searchParams.get('conversationId');
+    if (conversationIdFromUrl && messages.length > 0) {
+      const conv = messages.find(msg => msg.id === conversationIdFromUrl);
+      if (conv) {
+        setSelectedConversation(conv);
+        setActiveTab('messages');
+        // Clear the conversationId from URL after processing
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [messages, searchParams, setSearchParams]); // Add messages as dependency
+
+  // Socket.IO event listeners
+  useEffect(() => {
+    if (!socket || !currentUser?.id) return;
+
+    // Join room for the selected conversation when it changes
+    if (selectedConversation?.id) {
+      socket.emit('joinRoom', selectedConversation.id);
+      console.log(`Joined room: ${selectedConversation.id}`);
+    }
+
+    // Lắng nghe lời mời kết nối mới
+    socket.on('newConnectionRequest', async (newRequest) => {
+      console.log('Received new connection request via socket:', newRequest);
+      if (newRequest.receiverId === currentUser.id) {
+        let processedRequest = { ...newRequest };
+        try {
+          const userRes = await axios.get(`${API_BASE_URL}/users/${processedRequest.senderId}`);
+          processedRequest.fromUser = userRes.data;
+          const postRes = await axios.get(`${API_BASE_URL}/posts/${processedRequest.postId}`);
+          processedRequest.postTitle = postRes.data?.title || 'Bài đăng không xác định';
+        } catch (err) {
+          console.error('Error fetching related data for new connection request:', err);
+        }
+        setReceivedInvitations((prev) => {
+          if (!prev.some(inv => inv.id === processedRequest.id)) {
+            console.log('Adding new received invitation:', processedRequest.fromUser?.fullName, processedRequest.postTitle);
+            return [...prev, { ...processedRequest, type: 'received' }];
+          }
+          return prev;
+        });
+      }
+    });
+
+    // Lắng nghe khi lời mời được chấp nhận
+    socket.on('connectionAccepted', async (acceptedConnection) => {
+      console.log('Connection accepted via socket:', acceptedConnection);
+      // If current user is the sender, add to messages list
+      if (acceptedConnection.senderId === currentUser.id) {
+        try {
+          const otherUser = await axios.get(`${API_BASE_URL}/users/${acceptedConnection.receiverId}`).then(res => res.data);
+          const postData = await axios.get(`${API_BASE_URL}/posts/${acceptedConnection.postId}`).then(res => res.data);
+          const newConversation = {
+            id: acceptedConnection.id,
+            otherUser: otherUser,
+            postTitle: postData?.title || 'Bài đăng không xác định',
+            lastMessage: acceptedConnection.firstMessage?.content || acceptedConnection.message,
+            lastMessageTime: acceptedConnection.firstMessage?.timestamp || acceptedConnection.createdAt,
+            unread: false,
+            conversation: acceptedConnection.firstMessage ? [acceptedConnection.firstMessage] : []
+          };
+          setMessages((prev) => {
+            if (!prev.some(msg => msg.id === newConversation.id)) {
+              return [...prev, newConversation];
+            }
+            return prev;
+          });
+        } catch (error) {
+          console.error('Error processing accepted connection for messages:', error);
+        }
+      }
+      fetchConnections(); // Re-fetch all connections to ensure UI is consistent
+    });
+
+    // Lắng nghe khi lời mời bị từ chối
+    socket.on('connectionRejected', (rejectedConnection) => {
+      console.log('Connection rejected via socket:', rejectedConnection);
+      fetchConnections(); // Re-fetch connections to update UI
+    });
+
+    socket.on('newNotification', (notification) => {
+      console.log('Received new notification:', notification);
+    });
+
+    socket.on('receiveMessage', (newMessage) => {
+      console.log('Received message:', newMessage);
+      setSelectedConversation(prev => {
+        if (prev && prev.id === newMessage.conversationId) {
+          return {
+            ...prev,
+            conversation: [...(prev.conversation || []), newMessage]
+          };
+        }
+        return prev;
+      });
+      // Update last message and time in the messages list for preview
+      setMessages(prev => prev.map(conv => {
+        if (conv.id === newMessage.conversationId) {
+          return { ...conv, lastMessage: newMessage.content, lastMessageTime: newMessage.timestamp };
+        }
+        return conv;
+      }));
+    });
+
+    // Cleanup function for socket listeners
+    return () => {
+      if (selectedConversation?.id) {
+        socket.emit('leaveRoom', selectedConversation.id);
+      }
+      socket.off('newConnectionRequest');
+      socket.off('connectionAccepted');
+      socket.off('connectionRejected');
+      socket.off('newNotification');
+      socket.off('receiveMessage');
+    };
+  }, [socket, currentUser, selectedConversation?.id]); // Add selectedConversation.id to dependencies
+
+  // Fetch messages for selected conversation
+  useEffect(() => {
+    const fetchConversationMessages = async () => {
+      if (selectedConversation && selectedConversation.id) {
+        console.log(`Fetching messages for conversation ID: ${selectedConversation.id}`);
+        try {
+          // Use query parameter for conversationId
+          const response = await axios.get(`${API_BASE_URL}/messages?conversationId=${selectedConversation.id}`);
+          setSelectedConversation(prev => ({
+            ...prev,
+            conversation: response.data
+          }));
+          console.log(`Successfully fetched ${response.data.length} messages.`);
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+          setSelectedConversation(prev => ({ ...prev, conversation: [] }));
+        }
+      }
+    };
+    fetchConversationMessages();
+  }, [selectedConversation?.id]);
 
   const fetchConnections = async () => {
-    if (!currentUser) {
-      console.log('Connections: No current user, skipping fetchConnections');
+    if (!currentUser?.id) {
+      setLoading(false);
       return;
     }
     setLoading(true);
-    console.log('Connections: Fetching connections for user ID:', currentUser.uid);
     try {
-      const [sentConnections, receivedConnections, activeConversations] = await Promise.all([
-        getSentConnections(currentUser.uid),
-        getReceivedConnections(currentUser.uid),
-        getActiveConversations(currentUser.uid)
-      ]);
+      // Fetch full currentUser details to ensure fullName and avatar are available
+      const fullCurrentUserRes = await axios.get(`${API_BASE_URL}/users/${currentUser.id}`);
+      const fullCurrentUser = fullCurrentUserRes.data;
 
-      console.log('Connections: Raw fetched sent connections:', sentConnections);
-      console.log('Connections: Raw fetched received connections:', receivedConnections);
-      console.log('Connections: Raw fetched active conversations:', activeConversations);
+      // Fetch all connections where currentUser is sender or receiver using JSON Server's _or operator
+      // Note: json-server's _or operator expects a query parameter like ?senderId=1&_or_receiverId=2
+      // For simplicity and direct compatibility, we'll make two separate calls or rely on backend's /connections route logic
+      // Fetch connections where currentUser is the sender
+      const sentConnectionsRes = await axios.get(`${API_BASE_URL}/connections?senderId=${currentUser.id}`);
+      const sentConnections = sentConnectionsRes.data;
 
-      const sent = sentConnections.map(conn => ({
-        id: conn.id,
-        type: 'sent',
-        toUser: conn.toUser,
-        postId: conn.postId,
-        postTitle: conn.post?.title || 'Bài đăng',
-        message: conn.message,
-        timestamp: conn.createdAt,
-        status: conn.status
+      // Fetch connections where currentUser is the receiver
+      const receivedConnectionsRes = await axios.get(`${API_BASE_URL}/connections?receiverId=${currentUser.id}`);
+      const receivedConnections = receivedConnectionsRes.data;
+
+      // Combine and filter out duplicates (though json-server queries should prevent direct duplicates from separate calls)
+      const allConnections = [...sentConnections, ...receivedConnections.filter(recConn => !sentConnections.some(senConn => senConn.id === recConn.id))];
+
+      const processedSent = [];
+      const processedReceived = [];
+      const mappedConversations = [];
+
+      await Promise.all(allConnections.map(async conn => {
+        const isSender = conn.senderId === currentUser.id;
+        const otherUserId = isSender ? conn.receiverId : conn.senderId;
+        
+        let otherUser = null;
+        let postData = null;
+
+        try {
+          if (otherUserId) {
+            try {
+              const userRes = await axios.get(`${API_BASE_URL}/users/${otherUserId}`);
+              otherUser = userRes.data;
+              console.log(`Fetched user for connection ${conn.id}:`, otherUser.fullName);
+            } catch (userError) {
+              console.warn(`Error fetching user ${otherUserId} for connection ${conn.id}:`, userError.message);
+              otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback with all expected fields
+            }
+          } else {
+            console.warn(`Missing otherUserId for connection ${conn.id}. Skipping user fetch.`);
+            otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback with all expected fields
+          }
+
+          if (conn.postId) {
+            try {
+              const postRes = await axios.get(`${API_BASE_URL}/posts/${conn.postId}`);
+              postData = postRes.data;
+              console.log(`Fetched post for connection ${conn.id}:`, postData.title);
+            } catch (postError) {
+              console.warn(`Error fetching post ${conn.postId} for connection ${conn.id}:`, postError.message);
+              postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback with all expected fields
+            }
+          } else {
+            console.warn(`Missing postId for connection ${conn.id}. Skipping post fetch.`);
+            postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback with all expected fields
+          }
+
+          const processedConn = {
+            ...conn,
+            fromUser: isSender ? fullCurrentUser : otherUser, // Use fullCurrentUser
+            toUser: isSender ? otherUser : fullCurrentUser,   // Use fullCurrentUser
+            postTitle: postData?.title || 'Bài đăng không xác định',
+          };
+
+          if (isSender) {
+            processedSent.push(processedConn);
+            console.log('Processed sent invitation:', processedConn.toUser?.fullName, processedConn.postTitle);
+          } else {
+            processedReceived.push(processedConn);
+            console.log('Processed received invitation:', processedConn.fromUser?.fullName, processedConn.postTitle);
+          }
+
+          // If connection is accepted, add to messages list
+          if (conn.status === 'accepted') {
+            // Fetch messages using conversationId query parameter
+            const messagesRes = await axios.get(`${API_BASE_URL}/messages?conversationId=${conn.id}`);
+            const conversationMessages = messagesRes.data;
+            const lastMessage = conversationMessages.length > 0 ? conversationMessages[conversationMessages.length - 1] : null;
+
+            mappedConversations.push({
+              id: conn.id,
+              otherUser: otherUser,
+              postTitle: postData?.title || 'Bài đăng không xác định',
+              lastMessage: lastMessage?.content || conn.message,
+              lastMessageTime: lastMessage?.timestamp || conn.createdAt,
+              unread: false,
+              conversation: conversationMessages
+            });
+            console.log('Processed accepted conversation:', otherUser?.fullName, postData?.title);
+          }
+        } catch (error) {
+          console.error(`Error processing connection ${conn.id}:`, error);
+          if (error.response) {
+            console.error('Error response data:', error.response.data);
+            console.error('Error response status:', error.response.status);
+          }
+          // Continue processing other connections even if one fails
+        }
       }));
 
-      const received = receivedConnections.map(conn => ({
-        id: conn.id,
-        type: 'received',
-        fromUser: conn.fromUser,
-        postId: conn.postId,
-        postTitle: conn.post?.title || 'Bài đăng',
-        message: conn.message,
-        timestamp: conn.createdAt,
-        status: conn.status
-      }));
-
-      const mappedMessages = activeConversations.map(conv => ({
-        id: conv.id,
-        otherUser: conv.otherUser,
-        postTitle: conv.post?.title || 'Bài đăng',
-        lastMessage: conv.message,
-        lastMessageTime: conv.updatedAt?.toDate ? conv.updatedAt.toDate().toISOString() : new Date().toISOString(),
-        unread: false
-      }));
-
-      console.log('Connections: Transformed sent invitations:', sent);
-      console.log('Connections: Transformed received invitations:', received);
-      console.log('Connections: Mapped active conversations (messages):', mappedMessages);
+      // Sort by createdAt for consistent display
+      processedSent.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      processedReceived.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      mappedConversations.sort((a,b) => new Date(b.lastMessageTime || b.createdAt).getTime() - new Date(a.lastMessageTime || a.createdAt).getTime());
 
 
-      setSentInvitations(sent);
-      setReceivedInvitations(received);
-      setMessages(mappedMessages);
-      setMatches([]);
+      setSentInvitations(processedSent);
+      setReceivedInvitations(processedReceived);
+      // Ensure unique conversations
+      const uniqueConversations = Array.from(new Map(mappedConversations.map(conv => [conv.id, conv])).values());
+      setMessages(uniqueConversations);
+
     } catch (error) {
-      console.error('Connections: Error fetching connections:', error);
+      console.error('Error fetching connections:', error);
     } finally {
       setLoading(false);
-      console.log('Connections: Loading state set to false.');
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedConversation) return;
 
+  const handleInvitationResponse = async (invitationId, action) => {
     try {
-      const fromUserId = currentUser.uid;
-      const toUserId = selectedConversation.otherUser.uid;
-      const connectionId = selectedConversation.id;
-
-      await sendMessage(connectionId, fromUserId, toUserId, newMessage);
-      setNewMessage('');
-    } catch (error) {
-      console.error('Error sending message:', error);
-      alert('Không thể gửi tin nhắn. Vui lòng thử lại.');
-    }
-  };
-
-  const handleInvitationResponse = async (invitationId, response) => {
-    try {
-      if (response === 'accept') {
-        await acceptConnection(invitationId);
-        const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
-        if (acceptedInvitation) {
-          console.log('Connections: Accepted Invitation:', acceptedInvitation);
-          console.log('Connections: acceptedInvitation.fromUser:', acceptedInvitation.fromUser);
-          console.log('Connections: acceptedInvitation.toUser:', acceptedInvitation.toUser);
-
-          let otherUser;
-          if (acceptedInvitation.fromUser && acceptedInvitation.fromUser.uid) {
-            otherUser = (acceptedInvitation.fromUser.uid === currentUser.uid)
-              ? acceptedInvitation.toUser
-              : acceptedInvitation.fromUser;
-          } else {
-            const targetUserId = acceptedInvitation.fromUserId === currentUser.uid
-              ? acceptedInvitation.toUserId
-              : acceptedInvitation.fromUserId;
-            
-            otherUser = {
-              uid: targetUserId,
-              name: "Người dùng không xác định",
-              avatar: "https://via.placeholder.com/48",
-            };
-            console.warn('Connections: Using fallback otherUser due to undefined fromUser/toUser in acceptedInvitation:', acceptedInvitation);
-          }
-
-          if (!otherUser) {
-            console.error('Connections: otherUser is still undefined even after fallback logic.');
-            alert('Lỗi: Không thể xác định người dùng khác trong cuộc trò chuyện.');
-            return;
-          }
-          console.log('Connections: Determined otherUser:', otherUser);
-          
-          const conversationMessages = await getMessagesByConnectionId(invitationId);
-          console.log('Connections: Fetched conversation messages (raw):', conversationMessages);
-
-          const mappedConversation = Array.isArray(conversationMessages)
-            ? conversationMessages.map(msg => ({
-                id: msg.id,
-                sender: msg.fromUserId === currentUser.uid ? 'currentUser' : 'otherUser',
-                content: msg.content,
-                timestamp: msg.createdAt?.toDate ? msg.createdAt.toDate().toISOString() : new Date().toISOString()
-              }))
-            : [];
-          
-          console.log('Connections: Mapped conversation (before setting state):', mappedConversation);
-
-          const newSelectedConversation = { 
-            id: acceptedInvitation.id, 
-            otherUser: otherUser,
-            postTitle: acceptedInvitation.postTitle,
-            conversation: Array.isArray(mappedConversation) ? mappedConversation : [],
-            lastMessage: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].content : '',
-            lastMessageTime: mappedConversation.length > 0 ? mappedConversation[mappedConversation.length - 1].timestamp : new Date().toISOString()
-          };
-
-          setSelectedConversation(newSelectedConversation); 
-          console.log('Connections: selectedConversation state set to:', newSelectedConversation); 
-
-          setActiveTab('messages');
-        }
-      } else {
-        await declineConnection(invitationId);
+      const invitationToUpdate = receivedInvitations.find(inv => inv.id === invitationId);
+      if (!invitationToUpdate) {
+        console.error('Invitation not found:', invitationId);
+        return;
       }
 
-      const updatedInvitations = [...sentInvitations, ...receivedInvitations].map(inv => {
-        if (inv.id === invitationId) {
-          return {
-            ...inv,
-            status: response === 'accept' ? 'accepted' : 'declined'
-          };
-        }
-        return inv;
-      });
+      const newStatus = action === 'accept' ? 'accepted' : 'rejected';
       
-      setSentInvitations(updatedInvitations.filter(inv => inv.type === 'sent'));
-      setReceivedInvitations(updatedInvitations.filter(inv => inv.type === 'received'));
+      // Create a new object with all existing fields and the updated status
+      const updatedConnection = {
+        ...invitationToUpdate,
+        status: newStatus,
+      };
+
+      // If rejecting, increment rejectionCount
+      if (action === 'decline') { // Use 'decline' for rejecting
+        updatedConnection.rejectionCount = (invitationToUpdate.rejectionCount || 0) + 1;
+      } else if (action === 'accept') {
+        // If accepting, ensure rejectionCount is removed if it exists
+        if (Object.prototype.hasOwnProperty.call(updatedConnection, 'rejectionCount')) {
+          delete updatedConnection.rejectionCount;
+        }
+      }
+
+      const url = `${API_BASE_URL}/connections/${invitationId}`;
+      await axios.put(url, updatedConnection); // Send the full updated object
+      fetchConnections(); // Re-fetch all connections to update state
+
+      // If accepted, add to messages tab and set as selected conversation
+      if (action === 'accept') { // Use 'action' instead of 'response'
+        const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
+        if (acceptedInvitation) {
+          // Fetch the full user details for the other user
+          const userRes = await axios.get(`${API_BASE_URL}/users/${acceptedInvitation.senderId}`);
+          const otherUser = userRes.data;
+          
+          // Fetch the post data for the accepted invitation
+          let postData = null;
+          if (acceptedInvitation.postId) {
+            try {
+              const postRes = await axios.get(`${API_BASE_URL}/posts/${acceptedInvitation.postId}`);
+              postData = postRes.data;
+            } catch (postError) {
+              console.warn(`Error fetching post ${acceptedInvitation.postId} for accepted invitation:`, postError.message);
+              postData = { id: acceptedInvitation.postId, title: 'Bài đăng không xác định' }; // Fallback
+            }
+          } else {
+            postData = { title: 'Bài đăng không xác định' }; // Fallback if no postId
+          }
+
+          const newConversation = {
+            id: acceptedInvitation.id,
+            otherUser: otherUser, // otherUser đã được fetch đầy đủ
+            postTitle: postData?.title || 'Bài đăng không xác định', // postTitle đã được fetch đầy đủ
+            lastMessage: acceptedInvitation.message, // Tin nhắn ban đầu
+            lastMessageTime: new Date().toISOString(),
+            unread: false,
+            conversation: [{ // Tin nhắn ban đầu trong cuộc hội thoại
+              id: Date.now().toString(),
+              senderId: acceptedInvitation.senderId,
+              content: acceptedInvitation.message,
+              timestamp: acceptedInvitation.createdAt,
+            }]
+          };
+          setMessages((prev) => {
+            // Đảm bảo không thêm trùng lặp và cập nhật nếu đã tồn tại
+            const existingIndex = prev.findIndex(msg => msg.id === newConversation.id);
+            if (existingIndex > -1) {
+              const updatedMessages = [...prev];
+              updatedMessages[existingIndex] = newConversation;
+              return updatedMessages;
+            }
+            return [...prev, newConversation];
+          });
+          setSelectedConversation(newConversation);
+          setActiveTab('messages');
+        }
+      }
     } catch (error) {
       console.error('Error responding to invitation:', error);
-      alert('Có lỗi xảy ra khi xử lý lời mời. Vui lòng thử lại.');
     }
   };
 
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid timestamp provided to formatTime: ${timestamp}`);
+      return 'Ngày không hợp lệ';
+    }
     const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Vừa xong';
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    const diffInMonths = Math.floor(diffInDays / 30);
+    const diffInYears = Math.floor(diffInDays / 365);
+
+    if (diffInSeconds < 60) return 'Vừa xong';
+    if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
     if (diffInHours < 24) return `${diffInHours} giờ trước`;
-    if (diffInHours < 48) return 'Hôm qua';
-    return date.toLocaleDateString('vi-VN');
+    if (diffInDays < 7) return `${diffInDays} ngày trước`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} tuần trước`;
+    if (diffInMonths < 12) return `${diffInMonths} tháng trước`;
+    return `${diffInYears} năm trước`;
   };
 
   const getUnreadCount = (type) => {
@@ -278,12 +453,12 @@ function Connections() {
   };
 
   const filteredMessages = messages.filter(msg => 
-    msg.otherUser?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    msg.otherUser?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     msg.postTitle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredMatches = matches.filter(match => 
-    match.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    match.user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     match.postTitle.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -393,11 +568,11 @@ function Connections() {
                       <div key={message.id} className="border rounded-lg p-4 hover:bg-gray-50">
                         <div className="flex items-start space-x-4">
                           <div className="relative">
-                            <img
-                              src={message.otherUser?.avatar || 'https://via.placeholder.com/48'}
-                              alt={message.otherUser?.name || 'Người dùng'}
-                              className="w-12 h-12 rounded-full"
-                            />
+              <img
+                src={message.otherUser?.avatar || 'https://via.placeholder.com/48'}
+                alt={message.otherUser?.fullName || 'Người dùng'}
+                className="w-12 h-12 rounded-full object-cover"
+              />
                             {message.otherUser?.status === 'online' && (
                               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                             )}
@@ -407,7 +582,7 @@ function Connections() {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center space-x-2">
                                 <h3 className="font-semibold text-gray-900">
-                                  {message.otherUser?.name || 'Người dùng'}
+                                  {message.otherUser?.fullName || 'Người dùng'}
                                 </h3>
                                 {message.otherUser?.verified && (
                                   <CheckCircle size={16} className="text-green-500" />
@@ -433,18 +608,23 @@ function Connections() {
                             
                             <div className="flex items-center space-x-2">
                               <button
-                                onClick={() => setSelectedConversation(message)}
+                                onClick={() => {
+                                  console.log('Setting selected conversation:', message);
+                                  setSelectedConversation(message);
+                                }}
                                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                               >
                                 Xem cuộc trò chuyện
                               </button>
                               <span className="text-gray-300">•</span>
-                              <Link
-                                to={`/post/${message.postId}`}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Xem bài đăng
-                              </Link>
+                              {message.conversationId && (
+                                <Link
+                                  to={`/post/${message.conversationId}`}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Xem bài đăng
+                                </Link>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -482,14 +662,22 @@ function Connections() {
                             <div className="flex items-start space-x-4">
                               <img
                                 src={inv.fromUser?.avatar || 'https://via.placeholder.com/48'}
-                                alt={inv.fromUser?.name || 'Người dùng'}
+                                alt={inv.fromUser?.fullName || 'Người dùng'}
                                 className="w-12 h-12 rounded-full object-cover"
                               />
                               <div>
-                                <div className="font-semibold">{inv.fromUser?.name || 'Người gửi'}</div>
-                                <div className="text-sm text-gray-600">{inv.postTitle}</div>
-                                <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
-                                <div className="text-sm mt-1">{inv.message}</div>
+                                <div className="font-semibold">
+                                  {inv.fromUser?.fullName || 'Người gửi không xác định'}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Về: {inv.postTitle || 'Bài đăng không xác định'}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {formatTime(inv.createdAt)}
+                                </div>
+                                <div className="text-sm mt-1">
+                                  {inv.message || 'Không có lời nhắn'}
+                                </div>
                               </div>
                             </div>
                             <div className="flex space-x-2">
@@ -500,7 +688,8 @@ function Connections() {
                                 </>
                               )}
                               {inv.status === 'accepted' && <span className="text-green-600 text-xs font-medium">Đã chấp nhận</span>}
-                              {inv.status === 'declined' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>}
+                              {inv.status === 'rejected' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>} {/* Use 'rejected' consistently */}
+                              {inv.status === 'cancelled' && <span className="text-gray-600 text-xs font-medium">Đã hủy</span>}
                             </div>
                           </div>
                         ))
@@ -511,16 +700,32 @@ function Connections() {
                       ) : (
                         sentInvitations.map(inv => (
                           <div key={inv.id} className="border rounded-lg p-4 flex items-center justify-between">
-                            <div>
-                              <div className="font-semibold">{inv.toUser?.name || 'Người nhận'}</div>
-                              <div className="text-sm text-gray-600">{inv.postTitle}</div>
-                              <div className="text-xs text-gray-400">{formatTime(inv.timestamp)}</div>
-                              <div className="text-sm mt-1">{inv.message}</div>
+                            <div className="flex items-start space-x-4">
+                              <img
+                                src={inv.toUser?.avatar || 'https://via.placeholder.com/48'}
+                                alt={inv.toUser?.fullName || 'Người nhận'}
+                                className="w-12 h-12 rounded-full object-cover"
+                              />
+                              <div>
+                                <div className="font-semibold">
+                                  {inv.toUser?.fullName || 'Người nhận không xác định'}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Về: {inv.postTitle || 'Bài đăng không xác định'}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                  {formatTime(inv.createdAt)}
+                                </div>
+                                <div className="text-sm mt-1">
+                                  {inv.message || 'Không có lời nhắn'}
+                                </div>
+                              </div>
                             </div>
                             <div>
                               {inv.status === 'pending' && <span className="text-yellow-600 text-xs font-medium">Đang chờ</span>}
                               {inv.status === 'accepted' && <span className="text-green-600 text-xs font-medium">Đã chấp nhận</span>}
-                              {inv.status === 'declined' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>}
+                              {inv.status === 'rejected' && <span className="text-red-600 text-xs font-medium">Đã từ chối</span>} {/* Use 'rejected' consistently */}
+                              {inv.status === 'cancelled' && <span className="text-gray-600 text-xs font-medium">Đã hủy</span>}
                             </div>
                           </div>
                         ))
@@ -538,93 +743,91 @@ function Connections() {
                       <p className="text-gray-600">Chưa có gợi ý kết nối nào</p>
                     </div>
                   ) : (
-                    <>
+                    <div>
                       {filteredMatches.map(match => (
                         <div key={match.id} className="border rounded-lg p-4">
                           <div className="flex items-start space-x-4">
                             <img
                               src={match.user.avatar}
-                              alt={match.user.name}
+                              alt={match.user.fullName}
                               className="w-12 h-12 rounded-full"
                             />
                             
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <h3 className="font-semibold text-gray-900">
-                                    {match.user.name}
-                                  </h3>
-                                  {match.user.verified && (
-                                    <CheckCircle size={16} className="text-green-500" />
-                                  )}
-                                  <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                                    <Star size={12} fill="currentColor" />
-                                    <span>{match.matchScore}% phù hợp</span>
-                                  </div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {match.user.fullName}
+                                </h3>
+                                {match.user.verified && (
+                                  <CheckCircle size={16} className="text-green-500" />
+                                )}
+                                <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                                  <Star size={12} fill="currentColor" />
+                                  <span>{match.matchScore}% phù hợp</span>
                                 </div>
-                                <span className="text-sm text-gray-500">
-                                  {formatTime(match.timestamp)}
-                                </span>
                               </div>
-                              
-                              <div className="text-sm text-gray-600 mb-2">
-                                <p>{match.user.school} - {match.user.major}</p>
-                              </div>
-                              
-                              <p className="text-sm text-gray-600 mb-2">
-                                Về: {match.postTitle}
-                              </p>
-                              
-                              {match.mutualInterests.length > 0 && (
-                                <div className="mb-3">
-                                  <div className="text-sm font-medium text-gray-700 mb-1">
-                                    Sở thích chung:
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {match.mutualInterests.map((interest, index) => (
-                                      <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                                        {interest}
-                                      </span>
-                                    ))}
-                                  </div>
+                              <span className="text-sm text-gray-500">
+                                {formatTime(match.timestamp)}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm text-gray-600 mb-2">
+                              <p>{match.user.school} - {match.user.major}</p>
+                            </div>
+                            
+                            <p className="text-sm text-gray-600 mb-2">
+                              Về: {match.postTitle}
+                            </p>
+                            
+                            {match.mutualInterests.length > 0 && (
+                              <div className="mb-3">
+                                <div className="text-sm font-medium text-gray-700 mb-1">
+                                  Sở thích chung:
                                 </div>
-                              )}
-                              
-                              <div className="flex items-center justify-between">
-                                <Link
-                                  to={`/post/${match.postId}`}
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
-                                  Xem bài đăng
-                                </Link>
-                                
-                                <div className="flex items-center space-x-2">
-                                  {match.status === 'new' && (
-                                    <button
-                                      onClick={() => {
-                                        const updatedMatches = matches.map(m => 
-                                          m.id === match.id ? { ...m, status: 'contacted' } : m
-                                        );
-                                        setMatches(updatedMatches);
-                                      }}
-                                      className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
-                                    >
-                                      Gửi lời mời
-                                    </button>
-                                  )}
-                                  
-                                  {match.status === 'contacted' && (
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                                      Đã liên hệ
+                                <div className="flex flex-wrap gap-1">
+                                  {match.mutualInterests.map((interest, index) => (
+                                    <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
+                                      {interest}
                                     </span>
-                                  )}
+                                  ))}
                                 </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between">
+                              <Link
+                                to={`/post/${match.postId}`}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Xem bài đăng
+                              </Link>
+                              
+                              <div className="flex items-center space-x-2">
+                                {match.status === 'new' && (
+                                  <button
+                                    onClick={() => {
+                                      const updatedMatches = matches.map(m => 
+                                        m.id === match.id ? { ...m, status: 'contacted' } : m
+                                      );
+                                      setMatches(updatedMatches);
+                                    }}
+                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
+                                  >
+                                    Gửi lời mời
+                                  </button>
+                                )}
+                                
+                                {match.status === 'contacted' && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    Đã liên hệ
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
                       ))}
-                    </>
+                    </div>
                   )}
                 </div>
               )}
@@ -634,80 +837,58 @@ function Connections() {
       </div>
       {/* Conversation Modal */}
       {selectedConversation && selectedConversation.otherUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center space-x-3">
-                <img
-                  src={selectedConversation.otherUser.avatar || 'https://via.placeholder.com/48'}
-                  alt={selectedConversation.otherUser.name || 'Người dùng'}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div>
-                  <h3 className="font-semibold">
-                    {selectedConversation.otherUser.name || 'Người dùng'}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    {selectedConversation.postTitle}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedConversation(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="h-96 overflow-y-auto p-4 space-y-4">
-              {selectedConversation.conversation && selectedConversation.conversation.length > 0 ? (
-                selectedConversation.conversation.map(msg => (
-                  <div key={msg.id} className={`flex ${msg.sender === 'currentUser' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      msg.sender === 'currentUser' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-200 text-gray-900'
-                    }`}>
-                      <p className="text-sm">{msg.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        msg.sender === 'currentUser' 
-                          ? 'text-blue-100' 
-                          : 'text-gray-500'
-                      }`}>
-                        {formatTime(msg.timestamp)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-gray-500">Chưa có tin nhắn nào.</div>
-              )}
-            </div>
-            
-            <div className="p-4 border-t">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nhập tin nhắn..."
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <button
-                  onClick={() => handleSendMessage()}
-                  className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700"
-                >
-                  <Send size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ChatWindow 
+          conversation={selectedConversation} 
+          currentUser={currentUser} 
+          onClose={() => setSelectedConversation(null)} 
+        />
       )}
     </div>
   );
 }
 
 export default Connections;
+<environment_details>
+# VSCode Visible Files
+src/pages/Connections.jsx
+
+# VSCode Open Tabs
+db.json
+server/index.js
+src/components/ChatWindow.jsx
+src/App.jsx
+src/pages/MyConnections.jsx
+src/pages/Connections.jsx
+src/components/NotificationDropdown.jsx
+package.json
+src/pages/PostDetail.jsx
+src/components/ConnectionModal.jsx
+src/context/SocketContext.jsx
+src/pages/Register.jsx
+src/pages/PostManagement.jsx
+src/components/Layout.jsx
+src/components/NotificationModal.jsx
+src/pages/UserManagement.jsx
+src/pages/Settings.jsx
+src/pages/EditPost.jsx
+src/pages/CreatePost.jsx
+src/components/RatingModal.jsx
+src/pages/Login.jsx
+src/context/SocketContextObject.js
+src/hooks/useSocket.js
+src/pages/Home.jsx
+src/components/SearchFilter.jsx
+src/pages/Blog.jsx
+src/pages/AdminDashboard.jsx
+src/pages/BlogManagement.jsx
+src/components/PostCard.jsx
+
+# Current Time
+7/19/2025, 6:57:23 PM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+701,994 / 1,048.576K tokens used (67%)
+
+# Current Mode
+ACT MODE
+</environment_details>

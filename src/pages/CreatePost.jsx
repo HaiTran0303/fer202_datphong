@@ -75,6 +75,7 @@ const CreatePost = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Keep for general loading, not image specific
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   // Load post data if editing
   useEffect(() => {
@@ -127,10 +128,10 @@ const CreatePost = () => {
     }));
   };
 
-  const handleImageUpload = async (e) => {
+  const handleImageFileUpload = async ({ target }) => {
     // For json-server, we'll just store the file names or mock URLs
     // Real image upload would require a separate backend service
-    const files = Array.from(e.target.files);
+    const files = Array.from(target.files);
     if (files.length === 0) return;
 
     setIsLoading(true);
@@ -147,6 +148,35 @@ const CreatePost = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const isValidUrl = (url) => {
+    try {
+      const urlObject = new URL(url);
+      // Check for common image extensions
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+      const pathname = urlObject.pathname.toLowerCase();
+      return imageExtensions.some(ext => pathname.endsWith(ext));
+    } catch {
+      return false;
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    if (newImageUrl.trim() === '') {
+      setError('Vui lòng nhập URL hình ảnh.');
+      return;
+    }
+    if (!isValidUrl(newImageUrl.trim())) {
+      setError('URL hình ảnh không hợp lệ. Vui lòng nhập URL hợp lệ kết thúc bằng .jpg, .jpeg, .png, .gif, .webp, hoặc .svg.');
+      return;
+    }
+    setFormData(prev => ({
+      ...prev,
+      images: [...prev.images, newImageUrl.trim()]
+    }));
+    setNewImageUrl(''); // Clear input after adding
+    setError('');
   };
 
   const removeImage = (index) => {
@@ -573,23 +603,47 @@ const CreatePost = () => {
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Hình ảnh</h2>
             
+            <div className="mb-4">
+              <label htmlFor="image-url" className="block text-sm font-medium text-gray-700 mb-2">
+                Thêm ảnh từ URL
+              </label>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  id="image-url"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  className="flex-grow px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Dán URL hình ảnh vào đây (ví dụ: https://example.com/image.jpg)"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!newImageUrl.trim()}
+                >
+                  Thêm
+                </button>
+              </div>
+            </div>
+
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
                 type="file"
                 multiple
                 accept="image/*"
-                onChange={handleImageUpload}
+                onChange={handleImageFileUpload}
                 className="hidden"
-                id="image-upload"
+                id="image-file-upload"
               />
               <label
-                htmlFor="image-upload"
+                htmlFor="image-file-upload"
                 className="cursor-pointer flex flex-col items-center"
               >
                 <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <span className="text-gray-600">Nhấp để chọn hình ảnh</span>
+                <span className="text-gray-600">Hoặc nhấp để chọn hình ảnh từ máy tính</span>
                 <span className="text-sm text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</span>
               </label>
             </div>
@@ -602,7 +656,7 @@ const CreatePost = () => {
                     <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-300">
                       <img
                         src={image}
-                        alt={`Uploaded ${index + 1}`}
+                        alt={`Hình ảnh ${index + 1}`}
                         className="w-full h-full object-cover"
                       />
                       <button
