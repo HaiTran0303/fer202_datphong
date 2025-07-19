@@ -100,6 +100,7 @@ function Connections() {
         }
         setReceivedInvitations((prev) => {
           if (!prev.some(inv => inv.id === processedRequest.id)) {
+            console.log('Adding new received invitation:', processedRequest.fromUser?.fullName, processedRequest.postTitle);
             return [...prev, { ...processedRequest, type: 'received' }];
           }
           return prev;
@@ -110,12 +111,6 @@ function Connections() {
     // Lắng nghe khi lời mời được chấp nhận
     socket.on('connectionAccepted', async (acceptedConnection) => {
       console.log('Connection accepted via socket:', acceptedConnection);
-      // Update the status of the sent invitation
-      setSentInvitations((prev) =>
-        prev.map((inv) =>
-          inv.id === acceptedConnection.id ? { ...inv, status: 'accepted' } : inv
-        )
-      );
       // If current user is the sender, add to messages list
       if (acceptedConnection.senderId === currentUser.id) {
         try {
@@ -146,11 +141,6 @@ function Connections() {
     // Lắng nghe khi lời mời bị từ chối
     socket.on('connectionRejected', (rejectedConnection) => {
       console.log('Connection rejected via socket:', rejectedConnection);
-      setSentInvitations((prev) =>
-        prev.map((inv) =>
-          inv.id === rejectedConnection.id ? { ...inv, status: 'rejected' } : inv
-        )
-      );
       fetchConnections(); // Re-fetch connections to update UI
     });
 
@@ -227,9 +217,16 @@ function Connections() {
       // Fetch all connections where currentUser is sender or receiver using JSON Server's _or operator
       // Note: json-server's _or operator expects a query parameter like ?senderId=1&_or_receiverId=2
       // For simplicity and direct compatibility, we'll make two separate calls or rely on backend's /connections route logic
-      // Given the server/index.js now handles /connections with senderId and receiverId_or, we can use that.
-      const allConnectionsRes = await axios.get(`${API_BASE_URL}/connections?senderId=${currentUser.id}&receiverId_or=${currentUser.id}`);
-      const allConnections = allConnectionsRes.data;
+      // Fetch connections where currentUser is the sender
+      const sentConnectionsRes = await axios.get(`${API_BASE_URL}/connections?senderId=${currentUser.id}`);
+      const sentConnections = sentConnectionsRes.data;
+
+      // Fetch connections where currentUser is the receiver
+      const receivedConnectionsRes = await axios.get(`${API_BASE_URL}/connections?receiverId=${currentUser.id}`);
+      const receivedConnections = receivedConnectionsRes.data;
+
+      // Combine and filter out duplicates (though json-server queries should prevent direct duplicates from separate calls)
+      const allConnections = [...sentConnections, ...receivedConnections.filter(recConn => !sentConnections.some(senConn => senConn.id === recConn.id))];
 
       const processedSent = [];
       const processedReceived = [];
@@ -247,26 +244,28 @@ function Connections() {
             try {
               const userRes = await axios.get(`${API_BASE_URL}/users/${otherUserId}`);
               otherUser = userRes.data;
+              console.log(`Fetched user for connection ${conn.id}:`, otherUser.fullName);
             } catch (userError) {
               console.warn(`Error fetching user ${otherUserId} for connection ${conn.id}:`, userError.message);
-              otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+              otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback with all expected fields
             }
           } else {
             console.warn(`Missing otherUserId for connection ${conn.id}. Skipping user fetch.`);
-            otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+            otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback with all expected fields
           }
 
           if (conn.postId) {
             try {
               const postRes = await axios.get(`${API_BASE_URL}/posts/${conn.postId}`);
               postData = postRes.data;
+              console.log(`Fetched post for connection ${conn.id}:`, postData.title);
             } catch (postError) {
               console.warn(`Error fetching post ${conn.postId} for connection ${conn.id}:`, postError.message);
-              postData = { title: 'Bài đăng không xác định' }; // Fallback
+              postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback with all expected fields
             }
           } else {
             console.warn(`Missing postId for connection ${conn.id}. Skipping post fetch.`);
-            postData = { title: 'Bài đăng không xác định' }; // Fallback
+            postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback with all expected fields
           }
 
           const processedConn = {
@@ -278,8 +277,10 @@ function Connections() {
 
           if (isSender) {
             processedSent.push(processedConn);
+            console.log('Processed sent invitation:', processedConn.toUser?.fullName, processedConn.postTitle);
           } else {
             processedReceived.push(processedConn);
+            console.log('Processed received invitation:', processedConn.fromUser?.fullName, processedConn.postTitle);
           }
 
           // If connection is accepted, add to messages list
@@ -298,6 +299,7 @@ function Connections() {
               unread: false,
               conversation: conversationMessages
             });
+            console.log('Processed accepted conversation:', otherUser?.fullName, postData?.title);
           }
         } catch (error) {
           console.error(`Error processing connection ${conn.id}:`, error);
@@ -329,35 +331,82 @@ function Connections() {
   };
 
 
-  const handleInvitationResponse = async (invitationId, response) => {
+  const handleInvitationResponse = async (invitationId, action) => {
     try {
+      const invitationToUpdate = receivedInvitations.find(inv => inv.id === invitationId);
+      if (!invitationToUpdate) {
+        console.error('Invitation not found:', invitationId);
+        return;
+      }
+
+      const newStatus = action === 'accept' ? 'accepted' : 'rejected';
+      
+      // Create a new object with all existing fields and the updated status
+      const updatedConnection = {
+        ...invitationToUpdate,
+        status: newStatus,
+      };
+
+      // If rejecting, increment rejectionCount
+      if (action === 'decline') { // Use 'decline' for rejecting
+        updatedConnection.rejectionCount = (invitationToUpdate.rejectionCount || 0) + 1;
+      } else if (action === 'accept') {
+        // If accepting, ensure rejectionCount is removed if it exists
+        if (Object.prototype.hasOwnProperty.call(updatedConnection, 'rejectionCount')) {
+          delete updatedConnection.rejectionCount;
+        }
+      }
+
       const url = `${API_BASE_URL}/connections/${invitationId}`;
-      await axios.put(url, { status: response === 'accept' ? 'accepted' : 'rejected' });
+      await axios.put(url, updatedConnection); // Send the full updated object
       fetchConnections(); // Re-fetch all connections to update state
 
       // If accepted, add to messages tab and set as selected conversation
-      if (response === 'accept') {
+      if (action === 'accept') { // Use 'action' instead of 'response'
         const acceptedInvitation = receivedInvitations.find(inv => inv.id === invitationId);
         if (acceptedInvitation) {
           // Fetch the full user details for the other user
           const userRes = await axios.get(`${API_BASE_URL}/users/${acceptedInvitation.senderId}`);
           const otherUser = userRes.data;
           
+          // Fetch the post data for the accepted invitation
+          let postData = null;
+          if (acceptedInvitation.postId) {
+            try {
+              const postRes = await axios.get(`${API_BASE_URL}/posts/${acceptedInvitation.postId}`);
+              postData = postRes.data;
+            } catch (postError) {
+              console.warn(`Error fetching post ${acceptedInvitation.postId} for accepted invitation:`, postError.message);
+              postData = { id: acceptedInvitation.postId, title: 'Bài đăng không xác định' }; // Fallback
+            }
+          } else {
+            postData = { title: 'Bài đăng không xác định' }; // Fallback if no postId
+          }
+
           const newConversation = {
             id: acceptedInvitation.id,
-            otherUser: otherUser,
-            postTitle: `Bài đăng ${acceptedInvitation.postId}`, // Placeholder
-            lastMessage: acceptedInvitation.message, // Initial message
+            otherUser: otherUser, // otherUser đã được fetch đầy đủ
+            postTitle: postData?.title || 'Bài đăng không xác định', // postTitle đã được fetch đầy đủ
+            lastMessage: acceptedInvitation.message, // Tin nhắn ban đầu
             lastMessageTime: new Date().toISOString(),
             unread: false,
-            conversation: [{ // Initial message in conversation
+            conversation: [{ // Tin nhắn ban đầu trong cuộc hội thoại
               id: Date.now().toString(),
-              senderId: acceptedInvitation.senderId, // Use senderId for consistency with actual messages
+              senderId: acceptedInvitation.senderId,
               content: acceptedInvitation.message,
               timestamp: acceptedInvitation.createdAt,
             }]
           };
-          setMessages((prev) => [...prev, newConversation]);
+          setMessages((prev) => {
+            // Đảm bảo không thêm trùng lặp và cập nhật nếu đã tồn tại
+            const existingIndex = prev.findIndex(msg => msg.id === newConversation.id);
+            if (existingIndex > -1) {
+              const updatedMessages = [...prev];
+              updatedMessages[existingIndex] = newConversation;
+              return updatedMessages;
+            }
+            return [...prev, newConversation];
+          });
           setSelectedConversation(newConversation);
           setActiveTab('messages');
         }
@@ -370,7 +419,8 @@ function Connections() {
   const formatTime = (timestamp) => {
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) {
-      return 'Ngày không hợp lệ'; // Handle invalid dates
+      console.warn(`Invalid timestamp provided to formatTime: ${timestamp}`);
+      return 'Ngày không hợp lệ';
     }
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
@@ -403,12 +453,12 @@ function Connections() {
   };
 
   const filteredMessages = messages.filter(msg => 
-    msg.otherUser?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    msg.otherUser?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     msg.postTitle?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredMatches = matches.filter(match => 
-    match.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    match.user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     match.postTitle.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -518,11 +568,11 @@ function Connections() {
                       <div key={message.id} className="border rounded-lg p-4 hover:bg-gray-50">
                         <div className="flex items-start space-x-4">
                           <div className="relative">
-                              <img
-                                src={message.otherUser?.avatar || 'https://avatars.dicebear.com/api/human/avatar.svg'}
-                                alt={message.otherUser?.fullName || 'Người dùng'}
-                                className="w-12 h-12 rounded-full"
-                              />
+              <img
+                src={message.otherUser?.avatar || 'https://via.placeholder.com/48'}
+                alt={message.otherUser?.fullName || 'Người dùng'}
+                className="w-12 h-12 rounded-full object-cover"
+              />
                             {message.otherUser?.status === 'online' && (
                               <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                             )}
@@ -532,7 +582,7 @@ function Connections() {
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center space-x-2">
                                 <h3 className="font-semibold text-gray-900">
-                                  {message.otherUser?.name || 'Người dùng'}
+                                  {message.otherUser?.fullName || 'Người dùng'}
                                 </h3>
                                 {message.otherUser?.verified && (
                                   <CheckCircle size={16} className="text-green-500" />
@@ -567,12 +617,14 @@ function Connections() {
                                 Xem cuộc trò chuyện
                               </button>
                               <span className="text-gray-300">•</span>
-                              <Link
-                                to={`/post/${message.postId}`}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                              >
-                                Xem bài đăng
-                              </Link>
+                              {message.postId && (
+                                <Link
+                                  to={`/post/${message.postId}`}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  Xem bài đăng
+                                </Link>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -691,93 +743,91 @@ function Connections() {
                       <p className="text-gray-600">Chưa có gợi ý kết nối nào</p>
                     </div>
                   ) : (
-                    <>
+                    <div>
                       {filteredMatches.map(match => (
                         <div key={match.id} className="border rounded-lg p-4">
                           <div className="flex items-start space-x-4">
                             <img
                               src={match.user.avatar}
-                              alt={match.user.name}
+                              alt={match.user.fullName}
                               className="w-12 h-12 rounded-full"
                             />
                             
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center space-x-2">
-                                  <h3 className="font-semibold text-gray-900">
-                                    {match.user.name}
-                                  </h3>
-                                  {match.user.verified && (
-                                    <CheckCircle size={16} className="text-green-500" />
-                                  )}
-                                  <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                                    <Star size={12} fill="currentColor" />
-                                    <span>{match.matchScore}% phù hợp</span>
-                                  </div>
+                                <h3 className="font-semibold text-gray-900">
+                                  {match.user.fullName}
+                                </h3>
+                                {match.user.verified && (
+                                  <CheckCircle size={16} className="text-green-500" />
+                                )}
+                                <div className="flex items-center space-x-1 bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
+                                  <Star size={12} fill="currentColor" />
+                                  <span>{match.matchScore}% phù hợp</span>
                                 </div>
-                                <span className="text-sm text-gray-500">
-                                  {formatTime(match.timestamp)}
-                                </span>
                               </div>
-                              
-                              <div className="text-sm text-gray-600 mb-2">
-                                <p>{match.user.school} - {match.user.major}</p>
-                              </div>
-                              
-                              <p className="text-sm text-gray-600 mb-2">
-                                Về: {match.postTitle}
-                              </p>
-                              
-                              {match.mutualInterests.length > 0 && (
-                                <div className="mb-3">
-                                  <div className="text-sm font-medium text-gray-700 mb-1">
-                                    Sở thích chung:
-                                  </div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {match.mutualInterests.map((interest, index) => (
-                                      <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
-                                        {interest}
-                                      </span>
-                                    ))}
-                                  </div>
+                              <span className="text-sm text-gray-500">
+                                {formatTime(match.timestamp)}
+                              </span>
+                            </div>
+                            
+                            <div className="text-sm text-gray-600 mb-2">
+                              <p>{match.user.school} - {match.user.major}</p>
+                            </div>
+                            
+                            <p className="text-sm text-gray-600 mb-2">
+                              Về: {match.postTitle}
+                            </p>
+                            
+                            {match.mutualInterests.length > 0 && (
+                              <div className="mb-3">
+                                <div className="text-sm font-medium text-gray-700 mb-1">
+                                  Sở thích chung:
                                 </div>
-                              )}
-                              
-                              <div className="flex items-center justify-between">
-                                <Link
-                                  to={`/post/${match.postId}`}
-                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                >
-                                  Xem bài đăng
-                                </Link>
-                                
-                                <div className="flex items-center space-x-2">
-                                  {match.status === 'new' && (
-                                    <button
-                                      onClick={() => {
-                                        const updatedMatches = matches.map(m => 
-                                          m.id === match.id ? { ...m, status: 'contacted' } : m
-                                        );
-                                        setMatches(updatedMatches);
-                                      }}
-                                      className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
-                                    >
-                                      Gửi lời mời
-                                    </button>
-                                  )}
-                                  
-                                  {match.status === 'contacted' && (
-                                    <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                                      Đã liên hệ
+                                <div className="flex flex-wrap gap-1">
+                                  {match.mutualInterests.map((interest, index) => (
+                                    <span key={index} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs">
+                                      {interest}
                                     </span>
-                                  )}
+                                  ))}
                                 </div>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between">
+                              <Link
+                                to={`/post/${match.postId}`}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                              >
+                                Xem bài đăng
+                              </Link>
+                              
+                              <div className="flex items-center space-x-2">
+                                {match.status === 'new' && (
+                                  <button
+                                    onClick={() => {
+                                      const updatedMatches = matches.map(m => 
+                                        m.id === match.id ? { ...m, status: 'contacted' } : m
+                                      );
+                                      setMatches(updatedMatches);
+                                    }}
+                                    className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm"
+                                  >
+                                    Gửi lời mời
+                                  </button>
+                                )}
+                                
+                                {match.status === 'contacted' && (
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                                    Đã liên hệ
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
                       ))}
-                    </>
+                    </div>
                   )}
                 </div>
               )}
@@ -798,3 +848,47 @@ function Connections() {
 }
 
 export default Connections;
+<environment_details>
+# VSCode Visible Files
+src/pages/Connections.jsx
+
+# VSCode Open Tabs
+db.json
+server/index.js
+src/components/ChatWindow.jsx
+src/App.jsx
+src/pages/MyConnections.jsx
+src/pages/Connections.jsx
+src/components/NotificationDropdown.jsx
+package.json
+src/pages/PostDetail.jsx
+src/components/ConnectionModal.jsx
+src/context/SocketContext.jsx
+src/pages/Register.jsx
+src/pages/PostManagement.jsx
+src/components/Layout.jsx
+src/components/NotificationModal.jsx
+src/pages/UserManagement.jsx
+src/pages/Settings.jsx
+src/pages/EditPost.jsx
+src/pages/CreatePost.jsx
+src/components/RatingModal.jsx
+src/pages/Login.jsx
+src/context/SocketContextObject.js
+src/hooks/useSocket.js
+src/pages/Home.jsx
+src/components/SearchFilter.jsx
+src/pages/Blog.jsx
+src/pages/AdminDashboard.jsx
+src/pages/BlogManagement.jsx
+src/components/PostCard.jsx
+
+# Current Time
+7/19/2025, 6:57:23 PM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+701,994 / 1,048.576K tokens used (67%)
+
+# Current Mode
+ACT MODE
+</environment_details>

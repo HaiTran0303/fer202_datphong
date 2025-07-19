@@ -96,11 +96,11 @@ function MyConnections() {
               otherUser = userRes.data;
             } catch (userError) {
               console.warn(`Error fetching user ${otherUserId} for connection ${conn.id}:`, userError.message);
-              otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+              otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback
             }
           } else {
             console.warn(`Missing otherUserId for connection ${conn.id}. Skipping user fetch.`);
-            otherUser = { fullName: 'Người dùng không xác định', avatar: 'https://avatars.dicebear.com/api/human/avatar.svg' }; // Fallback
+            otherUser = { id: otherUserId, fullName: 'Người dùng không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }; // Fallback
           }
 
           if (conn.postId) {
@@ -109,11 +109,11 @@ function MyConnections() {
               postData = postRes.data;
             } catch (postError) {
               console.warn(`Error fetching post ${conn.postId} for connection ${conn.id}:`, postError.message);
-              postData = { title: 'Bài đăng không xác định' }; // Fallback
+              postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback
             }
           } else {
             console.warn(`Missing postId for connection ${conn.id}. Skipping post fetch.`);
-            postData = { title: 'Bài đăng không xác định' }; // Fallback
+            postData = { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }; // Fallback
           }
 
           return {
@@ -132,9 +132,9 @@ function MyConnections() {
           // Return a partially processed connection or null to indicate an error
           return {
             ...conn,
-            fromUser: isSender ? fullCurrentUser : { fullName: 'Không xác định', avatar: '' }, // Provide fallback user info
-            toUser: isSender ? { fullName: 'Không xác định', avatar: '' } : fullCurrentUser,   // Provide fallback user info
-            post: { title: 'Bài đăng không xác định' }, // Provide fallback post info
+            fromUser: isSender ? fullCurrentUser : { id: otherUserId, fullName: 'Không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' }, // Provide fallback user info
+            toUser: isSender ? { id: otherUserId, fullName: 'Không xác định', avatar: 'https://via.placeholder.com/48', school: 'Không xác định', major: 'Không xác định', verified: false, status: 'offline' } : fullCurrentUser,   // Provide fallback user info
+            post: { id: conn.postId, title: 'Bài đăng không xác định', userId: '', images: [], address: '', price: 0 }, // Provide fallback post info
             type: isSender ? 'sent' : 'received',
             error: true // Add an error flag
           };
@@ -269,10 +269,10 @@ function MyConnections() {
           <div className="flex space-x-8 px-6">
             <button
               onClick={() => setActiveTab('received')}
-              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm ${
+              className={`px-4 py-2 rounded-md font-medium text-sm ${
                 activeTab === 'received'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700'
               }`}
             >
               <UserPlus size={20} />
@@ -285,10 +285,10 @@ function MyConnections() {
             </button>
             <button
               onClick={() => setActiveTab('sent')}
-              className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm ${
+              className={`px-4 py-2 rounded-md font-medium text-sm ${
                 activeTab === 'sent'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700'
               }`}
             >
               <MessageCircle size={20} />
@@ -336,11 +336,11 @@ function MyConnections() {
                 return (
                   <div key={connection.id} className="border rounded-lg p-4">
                     <div className="flex items-start space-x-4">
-                      <img
-                        src={user?.avatar || 'https://avatars.dicebear.com/api/human/avatar.svg'}
-                        alt={user?.fullName}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
+            <img
+              src={user?.avatar || 'https://via.placeholder.com/48'}
+              alt={user?.fullName}
+              className="w-12 h-12 rounded-full object-cover"
+            />
                       
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
@@ -373,12 +373,14 @@ function MyConnections() {
                         )}
                         
                         <div className="flex items-center justify-between">
-                          <Link
-                            to={`/post/${connection.postId}`}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          >
-                            Xem bài đăng
-                          </Link>
+                          {connection.postId && (
+                            <Link
+                              to={`/post/${connection.postId}`}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              Xem bài đăng
+                            </Link>
+                          )}
                           
                           {connection.status === 'pending' && (
                             <div className="flex items-center space-x-2">
@@ -433,3 +435,47 @@ function MyConnections() {
 }
 
 export default MyConnections;
+<environment_details>
+# VSCode Visible Files
+src/pages/Connections.jsx
+
+# VSCode Open Tabs
+db.json
+server/index.js
+src/components/ChatWindow.jsx
+src/App.jsx
+src/pages/MyConnections.jsx
+src/pages/Connections.jsx
+src/components/NotificationDropdown.jsx
+package.json
+src/pages/PostDetail.jsx
+src/components/ConnectionModal.jsx
+src/context/SocketContext.jsx
+src/pages/Register.jsx
+src/pages/PostManagement.jsx
+src/components/Layout.jsx
+src/components/NotificationModal.jsx
+src/pages/UserManagement.jsx
+src/pages/Settings.jsx
+src/pages/EditPost.jsx
+src/pages/CreatePost.jsx
+src/components/RatingModal.jsx
+src/pages/Login.jsx
+src/context/SocketContextObject.js
+src/hooks/useSocket.js
+src/pages/Home.jsx
+src/components/SearchFilter.jsx
+src/pages/Blog.jsx
+src/pages/AdminDashboard.jsx
+src/pages/BlogManagement.jsx
+src/components/PostCard.jsx
+
+# Current Time
+7/19/2025, 7:06:03 PM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+759,490 / 1,048.576K tokens used (72%)
+
+# Current Mode
+ACT MODE
+</environment_details>

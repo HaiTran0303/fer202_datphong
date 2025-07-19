@@ -134,7 +134,7 @@ io.on('connection', (socket) => {
         message,
         status: 'pending', // pending, accepted, rejected
         createdAt: new Date().toISOString(),
-        rejectionCount: 0 // Initialize rejection count for new requests
+        rejectionCount: 0, // Initialize rejectionCount for new connections
       };
       
       // Save new connection to json-server
@@ -191,96 +191,108 @@ io.on('connection', (socket) => {
   socket.on('updateConnectionStatus', async (data) => {
     const { connectionId, status } = data;
     try {
-      const connectionRes = await axios.get(`${JSON_SERVER_URL}/connections/${connectionId}`);
-      const connection = connectionRes.data;
+      // Fetch the current connection to ensure all fields are retained
+      const currentConnectionRes = await axios.get(`${JSON_SERVER_URL}/connections/${connectionId}`);
+      const currentConnection = currentConnectionRes.data;
 
-      if (!connection) {
+      if (!currentConnection) {
         console.warn(`Connection with ID ${connectionId} not found for status update.`);
         return;
       }
 
-      let updatedConnection = { ...connection, status: status };
+      // Create a full updated object with the new status
+      const fullUpdatedConnection = { ...currentConnection, status: status };
 
+      // Handle rejectionCount if status is rejected
+      if (status === 'rejected') {
+        fullUpdatedConnection.rejectionCount = (currentConnection.rejectionCount || 0) + 1;
+      } else if (status === 'accepted' || status === 'cancelled') {
+        // If status is accepted or cancelled, ensure rejectionCount is reset or not present
+        // Only if it was previously set.
+      if (Object.prototype.hasOwnProperty.call(fullUpdatedConnection, 'rejectionCount')) {
+        delete fullUpdatedConnection.rejectionCount;
+      }
+      }
+
+      // Handle notifications and first message for accepted status
       if (status === 'accepted') {
         const firstMessage = {
           id: Date.now().toString() + '-first-msg',
-          conversationId: connection.id,
-          senderId: connection.senderId,
-          content: connection.message,
+          conversationId: currentConnection.id,
+          senderId: currentConnection.senderId,
+          content: currentConnection.message,
           timestamp: new Date().toISOString(),
         };
         await axios.post(`${JSON_SERVER_URL}/messages`, firstMessage); // Save first message
-        updatedConnection.firstMessage = firstMessage; // Add to object for socket emit
 
         // Create notification for sender
-        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.receiverId}`);
+        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${currentConnection.receiverId}`);
         const receiverUser = receiverUserRes.data;
         const notification = {
           id: Date.now().toString() + '-notify-accept',
-          userId: connection.senderId,
+          userId: currentConnection.senderId,
           type: 'connection_accepted',
           message: `${receiverUser?.fullName || 'Người dùng'} đã chấp nhận lời mời kết nối của bạn`,
           isRead: false,
           createdAt: new Date().toISOString(),
-          relatedEntity: { type: 'connection', id: connection.id },
+          relatedEntity: { type: 'connection', id: currentConnection.id },
           fromUser: { id: receiverUser?.id, fullName: receiverUser?.fullName, avatar: receiverUser?.avatar }
         };
         await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
-        const senderSocketId = usersMap.get(connection.senderId);
+        const senderSocketId = usersMap.get(currentConnection.senderId);
         if (senderSocketId) io.to(senderSocketId).emit('newNotification', notification);
       } else if (status === 'rejected') {
-        updatedConnection.rejectionCount = (connection.rejectionCount || 0) + 1;
         // Create notification for sender
-        const senderUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.senderId}`);
+        const senderUserRes = await axios.get(`${JSON_SERVER_URL}/users/${currentConnection.senderId}`);
         const senderUser = senderUserRes.data;
         const notification = {
           id: Date.now().toString() + '-notify-reject',
-          userId: connection.senderId,
+          userId: currentConnection.senderId,
           type: 'connection_rejected',
           message: `${senderUser?.fullName || 'Người dùng'} đã từ chối lời mời kết nối của bạn`,
           isRead: false,
           createdAt: new Date().toISOString(),
-          relatedEntity: { type: 'connection', id: connection.id },
+          relatedEntity: { type: 'connection', id: currentConnection.id },
           fromUser: { id: senderUser?.id, fullName: senderUser?.fullName, avatar: senderUser?.avatar }
         };
         await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
-        const senderSocketId = usersMap.get(connection.senderId);
+        const senderSocketId = usersMap.get(currentConnection.senderId);
         if (senderSocketId) io.to(senderSocketId).emit('newNotification', notification);
       } else if (status === 'cancelled') {
         // Create notification for receiver
-        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${connection.receiverId}`);
+        const receiverUserRes = await axios.get(`${JSON_SERVER_URL}/users/${currentConnection.receiverId}`);
         const receiverUser = receiverUserRes.data;
         const notification = {
           id: Date.now().toString() + '-notify-cancel',
-          userId: connection.receiverId,
+          userId: currentConnection.receiverId,
           type: 'connection_cancelled',
           message: `${receiverUser?.fullName || 'Người dùng'} đã hủy lời mời kết nối`,
           isRead: false,
           createdAt: new Date().toISOString(),
-          relatedEntity: { type: 'connection', id: connection.id },
+          relatedEntity: { type: 'connection', id: currentConnection.id },
           fromUser: { id: receiverUser?.id, fullName: receiverUser?.fullName, avatar: receiverUser?.avatar }
         };
         await axios.post(`${JSON_SERVER_URL}/notifications`, notification);
-        const receiverSocketId = usersMap.get(connection.receiverId);
+        const receiverSocketId = usersMap.get(currentConnection.receiverId);
         if (receiverSocketId) io.to(receiverSocketId).emit('newNotification', notification);
       }
 
-      // Update connection status on json-server
-      await axios.patch(`${JSON_SERVER_URL}/connections/${connectionId}`, { status: updatedConnection.status, rejectionCount: updatedConnection.rejectionCount });
+      // Use PUT to replace the entire resource with the updated object
+      await axios.put(`${JSON_SERVER_URL}/connections/${connectionId}`, fullUpdatedConnection);
 
-      // Emit status update to both sender and receiver
-      const senderSocketId = usersMap.get(connection.senderId);
-      const receiverSocketId = usersMap.get(connection.receiverId);
+      // Emit status update to both sender and receiver using the full updated object
+      const senderSocketId = usersMap.get(currentConnection.senderId);
+      const receiverSocketId = usersMap.get(currentConnection.receiverId);
 
       if (status === 'accepted') {
-        if (senderSocketId) io.to(senderSocketId).emit('connectionAccepted', updatedConnection);
-        if (receiverSocketId) io.to(receiverSocketId).emit('connectionAccepted', updatedConnection);
+        if (senderSocketId) io.to(senderSocketId).emit('connectionAccepted', fullUpdatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionAccepted', fullUpdatedConnection);
       } else if (status === 'rejected') {
-        if (senderSocketId) io.to(senderSocketId).emit('connectionRejected', updatedConnection);
-        if (receiverSocketId) io.to(receiverSocketId).emit('connectionRejected', updatedConnection);
+        if (senderSocketId) io.to(senderSocketId).emit('connectionRejected', fullUpdatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionRejected', fullUpdatedConnection);
       } else if (status === 'cancelled') {
-        if (senderSocketId) io.to(senderSocketId).emit('connectionCancelled', updatedConnection);
-        if (receiverSocketId) io.to(receiverSocketId).emit('connectionCancelled', updatedConnection);
+        if (senderSocketId) io.to(senderSocketId).emit('connectionCancelled', fullUpdatedConnection);
+        if (receiverSocketId) io.to(receiverSocketId).emit('connectionCancelled', fullUpdatedConnection);
       }
     } catch (error) {
       console.error('Error updating connection status via socket:', error.response?.data || error.message);

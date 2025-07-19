@@ -15,7 +15,6 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import EditPost from './pages/EditPost';
 import ErrorBoundary from './components/ErrorBoundary';
-import DemoModal from './components/DemoModal';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import PostManagement from './pages/PostManagement';
@@ -43,7 +42,6 @@ function App() {
   return (
     <ErrorBoundary>
       {/* AuthProvider removed as per user request */}
-      <DemoModal />
       <SocketProvider currentUser={currentUser}> {/* Wrap the entire application with SocketProvider */}
         <Router>
           <Routes>
