@@ -21,6 +21,7 @@ import PostManagement from './pages/PostManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useState, useEffect } from 'react'; // Import useState and useEffect
 import Blog from './pages/Blog'; // Import Blog component
+import BlogDetail from './pages/BlogDetail'; // Import BlogDetail component
 import './App.css';
 import { SocketProvider } from './context/SocketContext';
 
@@ -54,6 +55,7 @@ function App() {
             <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
             <Route path="/admin/users" element={<Layout><UserManagement /></Layout>} />
             <Route path="/admin/posts" element={<Layout><PostManagement /></Layout>} />
+            <Route path="/admin/blogs" element={<Layout><BlogManagement /></Layout>} />
           </Route>
 
           {/* App Routes - with Layout */}
@@ -78,13 +80,16 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/edit-post/:id" element={<EditPost />} />
                 
+                {/* Blog Routes */}
+                <Route path="/blog" element={<Blog />} />
+                <Route path="/blog/:id" element={<BlogDetail />} />
+
                 {/* Category Routes */}
                 <Route path="/nha-nguyen-can" element={<Home />} />
                 <Route path="/can-ho-chung-cu" element={<Home />} />
                 <Route path="/can-ho-mini" element={<Home />} />
                 <Route path="/can-ho-dich-vu" element={<Home />} />
                 <Route path="/mat-bang" element={<Home />} />
-                <Route path="/blog" element={<Blog />} /> {/* Route /blog to Blog component */}
                 <Route path="/bang-gia" element={<Home />} />
                 
                 {/* Location Routes */}
