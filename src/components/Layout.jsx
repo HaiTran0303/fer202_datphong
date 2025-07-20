@@ -121,7 +121,7 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
                 to="/suggestions" 
                 className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
               >
-                Gợi ý AI
+                Gợi ý phòng trọ
               </Link>
 
               <Link 

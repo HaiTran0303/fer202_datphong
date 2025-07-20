@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, School, MapPin, Edit, Save, X, Camera, Star, Heart, Home, CheckCircle, Upload, AlertCircle } from 'lucide-react';
 import axios from 'axios';
-
 const API_BASE_URL = 'http://localhost:3001';
 
 function Profile() {
@@ -163,15 +162,21 @@ function Profile() {
   };
 
   const handleSave = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      if (!currentUser || !currentUser.id) {
+        setMessage({ type: 'error', text: 'Người dùng chưa đăng nhập hoặc ID không hợp lệ.' });
+        return;
+      }
+
+      // Send updated profileData to the API
+      const response = await axios.put(`${API_BASE_URL}/users/${currentUser.id}`, profileData);
       
-      // Simulate saving to a backend or local storage
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In a real application, you would send profileData to your API
-      console.log('Saving profile data:', profileData);
-      
+      // Update local storage and state with the new profile data
+      localStorage.setItem('currentUser', JSON.stringify(response.data));
+      setCurrentUser(response.data);
+      setProfileData(response.data); // Ensure profileData state reflects the saved data
+
       setIsEditing(false);
       setMessage({ type: 'success', text: 'Cập nhật hồ sơ thành công!' });
     } catch (error) {
@@ -591,6 +596,16 @@ function Profile() {
                     ))}
                   </div>
                 </div>
+              </div>
+              <div className="md:col-span-2">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <Save size={20} />
+                  <span>{loading ? 'Đang lưu...' : 'Lưu thay đổi'}</span>
+                </button>
               </div>
             </div>
           )}

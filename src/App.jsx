@@ -25,15 +25,32 @@ import Blog from './pages/Blog'; // Import Blog component
 import BlogDetail from './pages/BlogDetail'; // Import BlogDetail component
 import './App.css';
 import { SocketProvider } from './context/SocketContext';
+import axios from 'axios'; // Import axios
+
+const API_BASE_URL = 'http://localhost:3001'; // Define API base URL
 
 function App() {
   const [globalSearchTerm, setGlobalSearchTerm] = useState(''); // Global search term state
   const [currentUser, setCurrentUser] = useState(null); // Current user state
+  const [profileData, setProfileData] = useState(null); // User profile data
 
   useEffect(() => {
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setCurrentUser(parsedUser);
+      // Fetch profile data once currentUser is set
+      const fetchProfile = async () => {
+        try {
+          const response = await axios.get(`${API_BASE_URL}/users?email=${parsedUser.email}`);
+          if (response.data.length > 0) {
+            setProfileData(response.data[0]);
+          }
+        } catch (error) {
+          console.error('Error fetching profile data in App.jsx:', error);
+        }
+      };
+      fetchProfile();
     }
   }, []); // Run once on mount
 
@@ -72,7 +89,15 @@ function App() {
                 <Route path="/create-post" element={<CreatePost />} />
                 {/* <Route path="/search-posts" element={<SearchPosts />} /> */}
                 <Route path="/post/:id" element={<PostDetail />} />
-                <Route path="/suggestions" element={<Suggestions />} />
+                <Route
+                  path="/suggestions"
+                  element={<Suggestions 
+                    userLookingFor={profileData?.lookingFor} 
+                    userInterests={profileData?.interests}
+                    userMajor={profileData?.major}
+                    userYear={profileData?.year}
+                  />} 
+                />
                 <Route path="/connections" element={<Connections />} />
                 <Route path="/my-connections" element={<MyConnections />} />
                 <Route path="/ratings" element={<Ratings />} />
