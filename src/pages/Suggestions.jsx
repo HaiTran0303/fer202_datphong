@@ -44,20 +44,15 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
     console.log('Suggestions component received userLookingFor:', userLookingFor);
     console.log('Suggestions component userPreferences:', userPreferences);
     
-    // Only fetch suggestions if criteria are complete
-    if (checkLookingForCriteriaComplete()) {
-      fetchSuggestions();
-    } else {
-      setLoading(false); // Stop loading if preferences are incomplete
-      setSuggestions([]); // Clear suggestions if preferences are incomplete
-    }
+    // Always fetch suggestions regardless of criteria completeness
+    fetchSuggestions();
   }, [userLookingFor, userInterests, userMajor, userYear]);
 
   const fetchSuggestions = async () => {
     setLoading(true);
     
     try {
-      const allPostsResponse = await fetch('http://3001/posts'); // Fetch from API
+      const allPostsResponse = await fetch('http://localhost:3001/posts'); // Fetch from API
       const allPostsFromDb = await allPostsResponse.json();
 
       const allPosts = allPostsFromDb;
@@ -66,6 +61,7 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
       const postsWithScores = allPosts.map(post => {
         let matchScore = 0;
         let totalWeight = 0; // To normalize the score later
+        let primaryMatchCount = 0; // Counter for the new requirement
 
         // Budget compatibility (Weight: 0.25)
         let budgetScore = 0;
@@ -73,6 +69,7 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
             const priceDifference = Math.abs(post.price - userPreferences.desiredBudget);
             // Assuming a max reasonable price difference for normalization, e.g., 5,000,000 VND
             budgetScore = Math.max(0, 1 - (priceDifference / 5000000)); // Normalize to 0-1
+            if (budgetScore > 0) primaryMatchCount++;
         }
         matchScore += budgetScore * 0.25;
         totalWeight += 0.25;
@@ -86,6 +83,7 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
             } else if (post.location && post.location.toLowerCase().includes(desiredLocationLower)) {
                 locationScore = 0.5; // Broader location match
             }
+            if (locationScore > 0) primaryMatchCount++;
         }
         matchScore += locationScore * 0.25;
         totalWeight += 0.25;
@@ -95,6 +93,10 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
         if (userPreferences.desiredGender) { // Check if a gender is desired
             if (userPreferences.desiredGender === 'any' || (post.genderPreference && (post.genderPreference === 'any' || post.genderPreference === userPreferences.desiredGender))) {
                 genderScore = 1;
+            }
+            // Only count as a "primary match" if a specific gender was desired and matched
+            if (userPreferences.desiredGender !== 'any' && genderScore === 1) {
+                primaryMatchCount++;
             }
         } else { // If user doesn't specify gender, it's a non-factor or neutral match
             genderScore = 0.5; // Neutral small weight if no preference
@@ -125,6 +127,7 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
                     userPreferences.desiredLifestyle.includes(attr)
                 );
                 lifestyleScore = commonLifestyles.length / userPreferences.desiredLifestyle.length; // Normalize to 0-1
+                if (lifestyleScore > 0) primaryMatchCount++;
             }
         }
         matchScore += lifestyleScore * 0.15;
@@ -162,17 +165,18 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
         totalWeight += 0.05;
 
         // Normalize final matchScore to be out of 100
-        const finalMatchScore = (matchScore / totalWeight) * 100;
+        const finalMatchScore = (totalWeight > 0) ? (matchScore / totalWeight) * 100 : 0; // Avoid division by zero
         
         return {
           ...post,
-          matchScore: Math.min(100, Math.max(0, finalMatchScore))
+          matchScore: Math.min(100, Math.max(0, finalMatchScore)),
+          primaryMatchCount: primaryMatchCount // Include the new counter
         };
       });
       
-      // Sort by match score and filter out low scores
+      // Sort by match score and filter based on new criteria
       const sortedSuggestions = postsWithScores
-        .filter(post => post.matchScore > 30)
+        .filter(post => post.primaryMatchCount >= 2 || post.matchScore > 30) // New filter condition
         .sort((a, b) => b.matchScore - a.matchScore);
       
       setSuggestions(sortedSuggestions);
@@ -232,18 +236,22 @@ function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
   };
 
   const checkLookingForCriteriaComplete = () => {
-    // If userLookingFor itself is null or undefined, criteria are not complete
+    // This function is no longer used to gate fetchSuggestions,
+    // but can be used for UI messaging.
     if (!userLookingFor) {
       return false;
     }
     const { desiredGender, desiredBudget, desiredLocation, desiredLifestyle } = userPreferences;
     
-    const isGenderComplete = desiredGender && desiredGender !== '';
-    const isBudgetComplete = desiredBudget !== null;
-    const isLocationComplete = desiredLocation && desiredLocation !== '';
-    const isLifestyleComplete = desiredLifestyle && desiredLifestyle.length > 0;
+    // Consider criteria complete if at least one core preference is set.
+    // This allows partial preferences to still trigger suggestions.
+    const hasAnyCorePreference = 
+      (desiredGender && desiredGender !== '') ||
+      (desiredBudget !== null) ||
+      (desiredLocation && desiredLocation !== '') ||
+      (desiredLifestyle && desiredLifestyle.length > 0);
 
-    return isGenderComplete && isBudgetComplete && isLocationComplete && isLifestyleComplete;
+    return hasAnyCorePreference;
   };
 
   const filteredSuggestions = suggestions; 
