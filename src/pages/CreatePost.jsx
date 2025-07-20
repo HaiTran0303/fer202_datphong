@@ -52,6 +52,11 @@ const CreatePost = () => {
   const navigate = useNavigate();
   const { postId } = useParams();
 
+  const currentUser = useState(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    return storedUser ? JSON.parse(storedUser) : null;
+  })[0];
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -234,7 +239,7 @@ const CreatePost = () => {
         location: formData.location || '',
         district: formData.district || '',
         budget: parseInt(formData.budget),
-        // userId: currentUser ? currentUser.uid : 'anonymous', // Replace with actual user ID if auth implemented
+        userId: currentUser ? currentUser.id : 'anonymous', // Add userId
         // authorName: formData.contactName || (currentUser ? currentUser.displayName : 'Anonymous'),
         // authorPhone: formData.contactPhone,
         createdAt: formData.createdAt || new Date().toISOString(), // Preserve createdAt if editing
