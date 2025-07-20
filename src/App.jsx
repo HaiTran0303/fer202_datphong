@@ -18,6 +18,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import AdminDashboard from './pages/AdminDashboard';
 import UserManagement from './pages/UserManagement';
 import PostManagement from './pages/PostManagement';
+import BlogManagement from './pages/BlogManagement';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useState, useEffect } from 'react'; // Import useState and useEffect
 import Blog from './pages/Blog'; // Import Blog component
