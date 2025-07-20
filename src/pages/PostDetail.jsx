@@ -119,45 +119,13 @@ function PostDetail() {
     console.log('isConnected:', isConnected);
   }, [currentUser, authorInfo, isConnected]);
 
-  // Helper to map amenities for display for room_listing posts
-  const roomListingAmenitiesLabels = {
-    "Máy lạnh": 'Máy lạnh',
-    "Wifi": 'Wifi',
-    "Giường": 'Giường',
-    "Tủ quần áo": 'Tủ quần áo',
-    "Bàn học": 'Bàn học',
-    "Tủ lạnh": 'Tủ lạnh',
-    "Máy giặt": 'Máy giặt',
-    "Bếp": 'Bếp',
-    "Ban công": 'Ban công',
-    "Thang máy": 'Thang máy',
-    "Sân vườn": 'Sân vườn',
-    "Bãi đậu xe": 'Bãi đậu xe',
-    "An ninh 24/7": 'An ninh 24/7'
-  };
-
-  const roomListingAmenitiesIcons = {
-    "Máy lạnh": <Snowflake size={16} />,
-    "Wifi": <Wifi size={16} />,
-    "Giường": <Home size={16} />, // Generic home icon for furniture
-    "Tủ quần áo": <Shirt size={16} />,
-    "Bàn học": <Home size={16} />, // Generic home icon for furniture
-    "Tủ lạnh": <Home size={16} />, // Generic home icon for appliance
-    "Máy giặt": <Home size={16} />, // Generic home icon for appliance
-    "Bếp": <Coffee size={16} />,
-    "Ban công": <Home size={16} />, // Generic home icon
-    "Thang máy": <Home size={16} />, // Generic home icon
-    "Sân vườn": <Home size={16} />, // Generic home icon
-    "Bãi đậu xe": <Car size={16} />,
-    "An ninh 24/7": <CheckCircle size={16} />
-  };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: post.title,
-          text: `${post.title} - ${post.type === 'room_listing' ? formatPrice(post.price) : formatPrice(post.budget)}`,
+          text: `${post.title} - ${post.type === 'room_listing' ? formatPrice(post.price, post.type) : formatPrice(post.budget, post.type)}`,
           url: window.location.href
         });
       } catch (error) {
@@ -174,17 +142,28 @@ function PostDetail() {
     setIsFavorite(!isFavorite);
   };
 
-  const formatPrice = (price) => {
-    if (price === undefined || price === null) {
+  const formatPrice = (value, type) => {
+    if (value === undefined || value === null) {
       return 'N/A';
     }
-    if (price >= 1000000000) { // For budget (tỷ)
-      return `${(price / 1000000000).toFixed(1)} tỷ`;
+    // For roommate_finding budget, display as raw number with 'triệu' suffix if applicable
+    if (type === 'roommate_finding') {
+      if (value >= 1000000) {
+        if (value % 1000000 === 0) {
+          return `${value}.0 triệu`;
+        }
+        return `${(value / 1000000).toFixed(1)} triệu`;
+      }
+      return `${value.toLocaleString('vi-VN')} đồng`;
+    } else { // For room_listing price
+      if (value >= 1000000000) {
+        return `${(value / 1000000000).toFixed(1)} tỷ`;
+      }
+      if (value >= 1000000) {
+        return `${(value / 1000000).toFixed(1)} triệu`;
+      }
+      return `${value.toLocaleString('vi-VN')} đồng`;
     }
-    if (price >= 1000000) { // For price (triệu)
-      return `${(price / 1000000).toFixed(1)} triệu`;
-    }
-    return `${price.toLocaleString()} đồng`; // For price (đồng)
   };
 
   const formatDate = (dateString) => {
@@ -348,26 +327,20 @@ function PostDetail() {
         {/* Main Content */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">{post.title}</h1>
+            <p className="text-sm text-gray-500 mb-4">Ngày đăng: {formatDate(post.createdAt)}</p>
             
             {/* Price, Location, Type */}
-            <div className="flex items-center mb-6">
-              <div className="flex items-center text-blue-600 mr-6">
-                <DollarSign size={20} className="mr-1" />
-                <span className="text-2xl font-bold">
-                  {post.type === 'room_listing' ? `${formatPrice(post.price)}/tháng` : formatPrice(post.budget)}
-                </span>
-              </div>
-              
-              <div className="flex items-center text-gray-600 mr-6">
-                <MapPin size={16} className="mr-1" />
-                <span>{post.district}, {post.location}</span>
-              </div>
-              
-              <div className="flex items-center text-gray-600">
-                <Home size={16} className="mr-1" />
-                <span>{post.type === 'room_listing' ? (post.category || 'Phòng trọ') : 'Tìm bạn ghép'}</span>
-              </div>
+            <div className="flex items-center text-blue-600 mb-2">
+              <span className="text-2xl font-bold">
+                ${post.type === 'room_listing' ? formatPrice(post.price, post.type) : formatPrice(post.budget, post.type)}
+              </span>
+              <span className="text-gray-600 ml-6 text-base">
+                {post.district}, {post.location}
+                {post.type === 'roommate_finding' && (
+                  <span> &bull; Tìm bạn ghép</span>
+                )}
+              </span>
             </div>
             
             <div className="prose max-w-none mb-6">
@@ -377,26 +350,6 @@ function PostDetail() {
             
             {/* Property Details / Roommate Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {post.type === 'room_listing' && (
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">Thông tin phòng</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Địa chỉ:</span>
-                      <span className="font-medium">{post.address || 'N/A'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Diện tích:</span>
-                      <span className="font-medium">{post.area || 'N/A'} m²</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tiền cọc:</span>
-                      <span className="font-medium">{formatPrice(post.deposit)}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {post.type === 'roommate_finding' && (
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Thông tin tìm bạn ghép</h3>
                   <div className="space-y-2">
@@ -434,25 +387,10 @@ function PostDetail() {
                     </div>
                   </div>
                 </div>
-              )}
             </div>
             
-            {/* Amenities / Interests & Lifestyle */}
+            {/* Interests & Lifestyle */}
             <div className="mb-6">
-              {post.type === 'room_listing' && (
-                <>
-                  <h3 className="text-lg font-semibold mb-3">Tiện ích</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {post.amenities?.map(amenity => (
-                      <div key={amenity} className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg"> {/* Đổi bg-gray-50 thành bg-gray-100, p-3 thành px-3 py-2 */}
-                        {roomListingAmenitiesIcons[amenity]}
-                        <span className="text-sm">{roomListingAmenitiesLabels[amenity]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-              {post.type === 'roommate_finding' && (
                 <>
                   <h3 className="text-lg font-semibold mb-3">Sở thích & Lối sống</h3>
                   <div className="space-y-3">
@@ -478,7 +416,6 @@ function PostDetail() {
                     </div>
                   </div>
                 </>
-              )}
             </div>
             
             {/* Rules (Removed as not in db.json) */}
