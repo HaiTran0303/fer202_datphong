@@ -76,7 +76,7 @@ function App() {
                 <Route path="/connections" element={<Connections />} />
                 <Route path="/my-connections" element={<MyConnections />} />
                 <Route path="/ratings" element={<Ratings />} />
-                <Route path="/my-posts" element={<MyPosts />} />
+                <Route path="/my-posts" element={<MyPosts currentUser={currentUser} />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/edit-post/:id" element={<EditPost />} />

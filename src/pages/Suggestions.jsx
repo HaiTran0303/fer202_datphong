@@ -17,6 +17,7 @@ import {
   Filter,
   TrendingUp
 } from 'lucide-react';
+import db from '../../db.json'; // Import data from db.json
 
 function Suggestions() {
   const [suggestions, setSuggestions] = useState([]);
@@ -29,12 +30,11 @@ function Suggestions() {
 
   // Mock user preferences (in real app, get from user profile)
   const userPreferences = {
-    budget: 3500000,
-    district: "Quận 1",
-    gender: "female",
-    roomType: "double",
-    interests: ["Đọc sách", "Xem phim", "Yoga"],
-    lifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều"]
+    desiredBudget: 3500000, // Ngân sách
+    desiredLocation: "Quận 1", // Khu vực mong muốn
+    desiredGender: "female", // Giới tính mong muốn
+    desiredLifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều", "Không hút thuốc", "Thích nấu ăn"], // Lối sống mong muốn
+    desiredInterests: ["Đọc sách", "Xem phim", "Nấu ăn"], // Sở thích
   };
 
   useEffect(() => {
@@ -45,65 +45,16 @@ function Suggestions() {
     setLoading(true);
     
     try {
-      // Simulate fetching posts from a mock API or local data
-      const mockPosts = [
-        {
-          id: '1',
-          title: 'Phòng trọ cao cấp Quận 1',
-          location: 'Quận 1',
-          price: 4000000,
-          genderPreference: 'female',
-          category: 'double',
-          amenities: ['Wifi', 'Điều hòa', 'Máy giặt', 'Bếp', 'An ninh'],
-          createdAt: new Date().toISOString(),
-          images: [],
-          hasVideo: false,
-        },
-        {
-          id: '2',
-          title: 'Phòng trọ giá rẻ Gò Vấp',
-          location: 'Gò Vấp',
-          price: 2500000,
-          genderPreference: 'male',
-          category: 'single',
-          amenities: ['Wifi', 'Quạt'],
-          createdAt: new Date().toISOString(),
-          images: [],
-          hasVideo: false,
-        },
-        {
-          id: '3',
-          title: 'Căn hộ mini Bình Thạnh',
-          location: 'Bình Thạnh',
-          price: 3800000,
-          genderPreference: 'female',
-          category: 'mini_apartment',
-          amenities: ['Wifi', 'Điều hòa', 'Nóng lạnh', 'Bếp'],
-          createdAt: new Date().toISOString(),
-          images: [],
-          hasVideo: true,
-        },
-        {
-          id: '4',
-          title: 'Ở ghép Quận 3',
-          location: 'Quận 3',
-          price: 1500000,
-          genderPreference: 'any',
-          category: 'shared',
-          amenities: ['Wifi'],
-          createdAt: new Date().toISOString(),
-          images: [],
-          hasVideo: false,
-        },
-      ];
+      // Use posts data from db.json
+      const allPostsFromDb = db.posts;
 
-      // Apply search and filters to mock data
-      let filteredPosts = mockPosts.filter(post => {
+      // Apply search and filters to db data
+      let filteredPosts = allPostsFromDb.filter(post => {
         const matchesSearch = searchTerm ? post.title.toLowerCase().includes(searchTerm.toLowerCase()) : true;
         const matchesCategory = filters.category ? post.category === filters.category : true;
         const matchesMinPrice = filters.minPrice ? post.price >= filters.minPrice : true;
         const matchesMaxPrice = filters.maxPrice ? post.price <= filters.maxPrice : true;
-        const matchesLocation = filters.location ? post.location === filters.location : true;
+        const matchesLocation = filters.location ? (post.location && post.location.toLowerCase().includes(filters.location.toLowerCase())) || (post.district && post.district.toLowerCase().includes(filters.location.toLowerCase())) : true;
         const matchesGender = filters.genderPreference ? post.genderPreference === filters.genderPreference : true;
         return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice && matchesLocation && matchesGender;
       });
@@ -114,34 +65,60 @@ function Suggestions() {
       const postsWithScores = allPosts.map(post => {
         let matchScore = 0;
         
-        // Budget compatibility (30% weight)
-        if (post.price && userPreferences.budget) {
-          const budgetDiff = Math.abs(post.price - userPreferences.budget);
-          const budgetScore = Math.max(0, 100 - (budgetDiff / userPreferences.budget * 100));
-          matchScore += budgetScore * 0.3;
+        // Budget compatibility (25% weight)
+        if (post.price && userPreferences.desiredBudget) {
+          const budgetDiff = Math.abs(post.price - userPreferences.desiredBudget);
+          const budgetScore = Math.max(0, 100 - (budgetDiff / userPreferences.desiredBudget * 100));
+          matchScore += budgetScore * 0.25;
         }
         
-        // District match (25% weight)
-        if (post.location === userPreferences.district || post.city === userPreferences.district) {
-          matchScore += 25;
+        // Location match (20% weight)
+        if (userPreferences.desiredLocation) {
+          const desiredLocationLower = userPreferences.desiredLocation.toLowerCase();
+          if (post.district && post.district.toLowerCase().includes(desiredLocationLower)) {
+            matchScore += 20;
+          } else if (post.location && post.location.toLowerCase().includes(desiredLocationLower)) {
+            matchScore += 10; // Slightly lower score if only city matches, not district
+          }
         }
         
-        // Gender compatibility (20% weight)
-        if (post.genderPreference === userPreferences.gender || !post.genderPreference) {
-          matchScore += 20;
-        }
-        
-        // Room type match (15% weight)
-        if (post.category === userPreferences.roomType) {
+        // Gender compatibility (15% weight)
+        if (userPreferences.desiredGender === 'any') {
+          matchScore += 15;
+        } else if (post.genderPreference && (post.genderPreference === 'any' || post.genderPreference === userPreferences.desiredGender)) {
           matchScore += 15;
         }
         
-        // Interests overlap (10% weight)
-        if (post.amenities && userPreferences.interests) {
-          const commonInterests = post.amenities.filter(amenity => 
-            userPreferences.interests.includes(amenity)
+        // Lifestyle compatibility (20% weight)
+        if (userPreferences.desiredLifestyle && userPreferences.desiredLifestyle.length > 0) {
+          let postAttributesForLifestyle = [];
+          if (post.lifestyle && Array.isArray(post.lifestyle)) {
+            postAttributesForLifestyle = post.lifestyle;
+          } else if (post.amenities && Array.isArray(post.amenities)) {
+            postAttributesForLifestyle = post.amenities.map(amenity => {
+              if (amenity.toLowerCase().includes('yên tĩnh') || amenity.toLowerCase().includes('máy lạnh')) return 'Yên tĩnh';
+              if (amenity.toLowerCase().includes('học tập nhiều') || amenity.toLowerCase().includes('wifi')) return 'Học tập nhiều';
+              if (amenity.toLowerCase().includes('thích nấu ăn') || amenity.toLowerCase().includes('bếp')) return 'Thích nấu ăn';
+              if (amenity.toLowerCase().includes('sạch sẽ')) return 'Sạch sẽ';
+              if (amenity.toLowerCase().includes('không hút thuốc')) return 'Không hút thuốc';
+              return null;
+            }).filter(Boolean);
+          }
+
+          if (postAttributesForLifestyle.length > 0) {
+            const commonLifestyles = postAttributesForLifestyle.filter(attr => 
+              userPreferences.desiredLifestyle.includes(attr)
+            );
+            matchScore += (commonLifestyles.length / userPreferences.desiredLifestyle.length) * 20;
+          }
+        }
+
+        // Interests overlap (20% weight)
+        if (post.interests && userPreferences.desiredInterests && userPreferences.desiredInterests.length > 0) {
+          const commonInterests = post.interests.filter(interest => 
+            userPreferences.desiredInterests.includes(interest)
           );
-          matchScore += (commonInterests.length / userPreferences.interests.length) * 10;
+          matchScore += (commonInterests.length / userPreferences.desiredInterests.length) * 20;
         }
         
         return {
@@ -222,8 +199,8 @@ function Suggestions() {
   const filteredSuggestions = suggestions.filter(suggestion => {
     if (filterType === 'all') return true;
     if (filterType === 'high-match') return suggestion.matchScore >= 85;
-    if (filterType === 'budget-friendly') return suggestion.price <= userPreferences.budget;
-    if (filterType === 'nearby') return suggestion.location === userPreferences.district;
+    if (filterType === 'budget-friendly') return suggestion.price <= userPreferences.desiredBudget;
+    if (filterType === 'nearby') return suggestion.location === userPreferences.desiredLocation;
     return true;
   });
 
@@ -254,12 +231,9 @@ function Suggestions() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2 flex items-center">
-              <Brain className="mr-3" />
-              Gợi ý AI
+              <Home className="mr-3" />
+              Gợi ý phòng trọ
             </h1>
-            <p className="text-purple-100">
-              Dựa trên sở thích và yêu cầu của bạn, chúng tôi đã tìm thấy {suggestions.length} gợi ý phù hợp
-            </p>
           </div>
           <button
             onClick={refreshSuggestions}

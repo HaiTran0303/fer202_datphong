@@ -334,6 +334,41 @@
       "likes": 11,
       "id": "8",
       "type": "room_listing"
+    },
+    {
+      "id": "3fed",
+      "title": "adadadad",
+      "description": "aaaaaaaaaaaaaaaaa",
+      "budget": 30000000000000,
+      "location": "Hà Nội",
+      "district": "Hà Đông",
+      "roomType": "single",
+      "genderPreference": "male",
+      "myGender": "male",
+      "school": "Đại học FPT",
+      "major": "Kỹ thuật",
+      "year": "3",
+      "availableFrom": "2025-07-20",
+      "contactName": "Trần Hoàng Hải",
+      "contactPhone": "0972773693",
+      "interests": [
+        "Xem phim",
+        "Nấu ăn",
+        "Yoga"
+      ],
+      "lifestyle": [
+        "Yên tĩnh",
+        "Dậy sớm",
+        "Học tập nhiều"
+      ],
+      "images": [],
+      "createdAt": "2025-07-20T03:36:58.743Z",
+      "updatedAt": "2025-07-20T03:36:58.743Z",
+      "status": "active",
+      "views": 0,
+      "likes": 0,
+      "userId": "74ad",
+      "type": "roommate_finding"
     }
   ],
   "blogs": [
@@ -780,6 +815,16 @@
         "creationTime": "2023-01-01T00:00:00.000Z"
       },
       "postTitle": "PHÒNG TRỌ MỚI RẤT ĐẸP SỐ 373/1 ĐƯỜNG LÝ THƯỜNG KIỆT, QUẬN TÂN BÌNH - GẦN BÊN TRƯỜNG ĐH BÁCH KHOA"
+    },
+    {
+      "id": "1752983867791",
+      "senderId": "user1",
+      "receiverId": "74ad",
+      "postId": "3fed",
+      "message": "aaaaaaaaaa",
+      "status": "pending",
+      "createdAt": "2025-07-20T03:57:47.791Z",
+      "rejectionCount": 0
     }
   ],
   "messages": [
@@ -950,6 +995,23 @@
       "fromUser": {
         "id": "74ad",
         "fullName": "Trần Hoàng Hải"
+      }
+    },
+    {
+      "id": "1752983867797-notify",
+      "userId": "74ad",
+      "type": "connection_request",
+      "message": "Demo User đã gửi lời mời kết nối",
+      "isRead": false,
+      "createdAt": "2025-07-20T03:57:47.797Z",
+      "relatedEntity": {
+        "type": "connection",
+        "id": "1752983867791"
+      },
+      "fromUser": {
+        "id": "user1",
+        "fullName": "Demo User",
+        "avatar": "https://via.placeholder.com/150"
       }
     }
   ],
