@@ -299,6 +299,21 @@ io.on('connection', (socket) => {
       socket.emit('updateConnectionStatusFailed', 'Failed to update connection status.');
     }
   });
+
+  // New API endpoint to check connection status between two users
+  app.get('/connections/status/:userId1/:userId2', async (req, res) => {
+    const { userId1, userId2 } = req.params;
+    try {
+      const response1 = await axios.get(`${JSON_SERVER_URL}/connections?senderId=${userId1}&receiverId=${userId2}&status=accepted`);
+      const response2 = await axios.get(`${JSON_SERVER_URL}/connections?senderId=${userId2}&receiverId=${userId1}&status=accepted`);
+
+      const isConnected = response1.data.length > 0 || response2.data.length > 0;
+      res.json({ isConnected });
+    } catch (error) {
+      console.error('Error checking connection status:', error.response?.data || error.message);
+      res.status(500).json({ error: 'Failed to check connection status' });
+    }
+  });
 });
 
 server.listen(SOCKET_PORT, () => {

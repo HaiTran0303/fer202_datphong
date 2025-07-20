@@ -17,8 +17,7 @@ import {
 
 const API_BASE_URL = 'http://localhost:3001';
 
-const MyPosts = () => {
-  // Removed Firebase auth related state and imports
+const MyPosts = ({ currentUser }) => {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,23 +28,20 @@ const MyPosts = () => {
   const [postToDelete, setPostToDelete] = useState(null);
 
   useEffect(() => {
-    // Removed currentUser check for now, as Firebase auth is removed
-    // You'll need to implement your own authentication system if needed
-    // if (!currentUser) {
-    //   navigate('/login');
-    //   return;
-    // }
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
     loadMyPosts();
-  }, [navigate]); // Removed currentUser from dependency array
+  }, [navigate, currentUser]);
 
   const loadMyPosts = async () => {
     try {
       setLoading(true);
-      // For json-server, assuming a fixed user ID or fetching all posts for now
-      // If authentication is implemented, replace 'user1' with actual user ID
+      console.log('Fetching posts for currentUser:', currentUser); // Add this line
       const response = await axios.get(`${API_BASE_URL}/posts`, {
         params: {
-          // authorId: 'user1', // Uncomment and replace with actual user ID if needed
+          userId: currentUser.id,
         }
       });
       const fetchedPosts = response.data;

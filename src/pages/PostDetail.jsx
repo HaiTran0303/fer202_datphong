@@ -41,6 +41,7 @@ function PostDetail() {
   const [showImageModal, setShowImageModal] = useState(false);
   const [showConnectionModal, setShowConnectionModal] = useState(false);
   const [authorInfo, setAuthorInfo] = useState(null);
+  const [isConnected, setIsConnected] = useState(false); // Thêm state isConnected
 
   const fetchPost = useCallback(async () => {
     setLoading(true);
@@ -86,6 +87,37 @@ function PostDetail() {
     fetchPost();
   }, [id, navigate, fetchPost]);
 
+  // Thêm hàm fetchConnectionStatus
+  const fetchConnectionStatus = useCallback(async () => {
+    if (currentUser && authorInfo) {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/connections/status/${currentUser.uid}/${authorInfo.id}`); // Cập nhật endpoint
+        setIsConnected(response.data.isConnected);
+      } catch (error) {
+        console.error('Error checking connection status:', error);
+        setIsConnected(false);
+      }
+    }
+  }, [currentUser, authorInfo]);
+
+  // Gọi fetchConnectionStatus trong useEffect
+  useEffect(() => {
+    if (currentUser && authorInfo) {
+      fetchConnectionStatus();
+    }
+  }, [currentUser, authorInfo, fetchConnectionStatus]);
+
+  // Debugging logs
+  useEffect(() => {
+    console.log('currentUser:', currentUser);
+    console.log('authorInfo:', authorInfo);
+    if (currentUser && authorInfo) {
+      console.log('currentUser.id:', currentUser.id); // Sửa từ .uid sang .id
+      console.log('authorInfo.id:', authorInfo.id);
+      console.log('currentUser.id !== authorInfo.id:', currentUser.id !== authorInfo.id); // Sửa từ .uid sang .id
+    }
+    console.log('isConnected:', isConnected);
+  }, [currentUser, authorInfo, isConnected]);
 
   // Helper to map amenities for display for room_listing posts
   const roomListingAmenitiesLabels = {
@@ -318,37 +350,24 @@ function PostDetail() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
             
-            <div className="flex items-center space-x-6 mb-6">
-              {post.type === 'room_listing' && (
-                <>
-                  <div className="flex items-center text-blue-600">
-                    <DollarSign size={20} className="mr-1" />
-                    <span className="text-2xl font-bold">{formatPrice(post.price)}/tháng</span>
-                  </div>
-                  
-                  <div className="flex items-center text-gray-600">
-                    <MapPin size={16} className="mr-1" />
-                    <span>{post.district}, {post.location}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-gray-600">
-                    <Home size={16} className="mr-1" />
-                    <span>{post.category}</span>
-                  </div>
-                </>
-              )}
-              {post.type === 'roommate_finding' && (
-                <>
-                  <div className="flex items-center text-blue-600">
-                    <DollarSign size={20} className="mr-1" />
-                    <span className="text-2xl font-bold">{formatPrice(post.budget)}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600">
-                    <MapPin size={16} className="mr-1" />
-                    <span>{post.district}, {post.location}</span>
-                  </div>
-                </>
-              )}
+            {/* Price, Location, Type */}
+            <div className="flex items-center mb-6">
+              <div className="flex items-center text-blue-600 mr-6">
+                <DollarSign size={20} className="mr-1" />
+                <span className="text-2xl font-bold">
+                  {post.type === 'room_listing' ? `${formatPrice(post.price)}/tháng` : formatPrice(post.budget)}
+                </span>
+              </div>
+              
+              <div className="flex items-center text-gray-600 mr-6">
+                <MapPin size={16} className="mr-1" />
+                <span>{post.district}, {post.location}</span>
+              </div>
+              
+              <div className="flex items-center text-gray-600">
+                <Home size={16} className="mr-1" />
+                <span>{post.type === 'room_listing' ? (post.category || 'Phòng trọ') : 'Tìm bạn ghép'}</span>
+              </div>
             </div>
             
             <div className="prose max-w-none mb-6">
@@ -405,6 +424,14 @@ function PostDetail() {
                       <span className="text-gray-600">Có thể vào ở từ:</span>
                       <span className="font-medium">{formatDate(post.availableFrom) || 'N/A'}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tên liên hệ:</span>
+                      <span className="font-medium">{post.contactName || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Số điện thoại:</span>
+                      <span className="font-medium">{post.contactPhone || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -417,7 +444,7 @@ function PostDetail() {
                   <h3 className="text-lg font-semibold mb-3">Tiện ích</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {post.amenities?.map(amenity => (
-                      <div key={amenity} className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
+                      <div key={amenity} className="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg"> {/* Đổi bg-gray-50 thành bg-gray-100, p-3 thành px-3 py-2 */}
                         {roomListingAmenitiesIcons[amenity]}
                         <span className="text-sm">{roomListingAmenitiesLabels[amenity]}</span>
                       </div>
@@ -485,15 +512,17 @@ function PostDetail() {
             
             
             <div className="space-y-3">
-              {currentUser && currentUser.uid !== authorInfo?.id ? (
+              {currentUser && currentUser.id !== authorInfo?.id ? ( // Sửa từ .uid sang .id
                 <>
-                  <button
-                    onClick={() => setShowConnectionModal(true)}
-                    className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
-                  >
-                    <UserPlus size={20} />
-                    <span>Gửi lời mời kết nối</span>
-                  </button>
+                  {!isConnected && ( // Chỉ hiển thị nút kết nối nếu chưa kết nối
+                    <button
+                      onClick={() => setShowConnectionModal(true)}
+                      className="w-full bg-purple-600 text-white py-3 rounded-md hover:bg-purple-700 flex items-center justify-center space-x-2"
+                    >
+                      <UserPlus size={20} />
+                      <span>Gửi lời mời kết nối</span>
+                    </button>
+                  )}
                   
                   <button
                     onClick={() => window.location.href = `tel:${authorInfo.phone}`}
