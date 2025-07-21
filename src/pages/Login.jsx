@@ -29,6 +29,12 @@ function Login() {
 
       if (response.data.length > 0) {
         const user = response.data[0];
+        if (user.isBlocked) {
+          throw new Error('Account is blocked');
+        }
+        if (user.isActive === false) {
+          throw new Error('Account is inactive');
+        }
         console.log('Login successful:', user);
         // Store user info in localStorage or context for session management
         localStorage.setItem('currentUser', JSON.stringify(user));
@@ -95,7 +101,11 @@ function Login() {
       
       let errorMessage = 'Đăng nhập thất bại';
       
-      if (err.response && err.response.status === 401) {
+      if (err.message === 'Account is blocked') {
+        errorMessage = 'Tài khoản của bạn đã bị chặn. Vui lòng liên hệ quản trị viên.';
+      } else if (err.message === 'Account is inactive') {
+        errorMessage = 'Tài khoản này đã bị vô hiệu hóa.';
+      } else if (err.response && err.response.status === 401) {
         errorMessage = 'Email hoặc mật khẩu không đúng';
       } else if (err.message === 'Invalid credentials') {
         errorMessage = 'Email hoặc mật khẩu không đúng';
