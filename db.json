@@ -334,6 +334,54 @@
       "likes": 11,
       "id": "8",
       "type": "room_listing"
+    },
+    {
+      "title": "test",
+      "description": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "price": "3000000",
+      "area": "30",
+      "location": "Hà Nội",
+      "district": "Sơn Tây",
+      "city": "Hà Nội",
+      "images": [],
+      "contactPhone": "0972773693",
+      "status": "active",
+      "updatedAt": "2025-07-20T19:21:51.553Z",
+      "id": "8d7e"
+    },
+    {
+      "id": "0354",
+      "title": "test1",
+      "description": "adadadadad",
+      "budget": 3000000,
+      "location": "Hà Nội",
+      "district": "Sóc Sơn",
+      "roomType": "double",
+      "genderPreference": "male",
+      "myGender": "male",
+      "school": "Đại học FPT",
+      "major": "Công nghệ thông tin",
+      "year": "2",
+      "availableFrom": "2025-07-22",
+      "contactName": "Trần Hoàng Hải",
+      "contactPhone": "0972773693",
+      "interests": [
+        "Đọc sách",
+        "Thể thao",
+        "Học ngoại ngữ"
+      ],
+      "lifestyle": [
+        "Sạch sẽ",
+        "Không uống rượu",
+        "Không hút thuốc"
+      ],
+      "images": [],
+      "userId": "74ad",
+      "createdAt": "2025-07-20T20:23:48.344Z",
+      "updatedAt": "2025-07-20T20:23:48.344Z",
+      "status": "active",
+      "views": 0,
+      "likes": 0
     }
   ],
   "blogs": [
@@ -645,16 +693,28 @@
       "creationTime": "2023-02-15T00:00:00.000Z"
     },
     {
-      "id": "74ad",
-      "email": "abc@gmail.com",
-      "password": "123456",
       "fullName": "Trần Hoàng Hải",
-      "role": "user",
+      "email": "abc@gmail.com",
       "phone": "0972773693",
-      "createdAt": "2025-07-16T03:40:57.759Z",
-      "updatedAt": "2025-07-16T03:40:57.759Z",
-      "isActive": true,
-      "creationTime": "2025-07-16T03:40:57.759Z"
+      "school": "",
+      "major": "",
+      "year": "",
+      "gender": "",
+      "city": "",
+      "bio": "",
+      "interests": [],
+      "lookingFor": {
+        "gender": "male",
+        "ageRange": "",
+        "budget": "2-3m",
+        "location": "Hà Nội",
+        "lifestyle": [
+          "Sạch sẽ",
+          "Không hút thuốc",
+          "Không uống rượu"
+        ]
+      },
+      "id": "74ad"
     },
     {
       "id": "4fe5",
@@ -695,14 +755,8 @@
       "creationTime": "2025-07-17T12:46:24.260Z"
     }
   ],
-  "connections": [
-    
-  ],
-  "messages": [
-    
-  ],
-  "notifications": [
-    
-  ],
+  "connections": [],
+  "messages": [],
+  "notifications": [],
   "settings": []
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import SearchFilter from '../components/SearchFilter';
 import { 
   Brain, 
   Star, 
@@ -8,128 +7,176 @@ import {
   MapPin, 
   DollarSign, 
   Users, 
-  Calendar,
   Eye,
-  CheckCircle,
-  Home,
-  Sparkles,
-  RefreshCw,
-  Filter,
-  TrendingUp
+  RefreshCw
 } from 'lucide-react';
-import db from '../../db.json'; // Import data from db.json
+import { useMemo } from 'react'; // Import useMemo
 
-function Suggestions() {
+function Suggestions({ userLookingFor, userInterests, userMajor, userYear }) {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [favorites, setFavorites] = useState([]);
-  const [filterType, setFilterType] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState({});
 
-  // Mock user preferences (in real app, get from user profile)
-  const userPreferences = {
-    desiredBudget: 3500000, // Ngân sách
-    desiredLocation: "Quận 1", // Khu vực mong muốn
-    desiredGender: "female", // Giới tính mong muốn
-    desiredLifestyle: ["Sạch sẽ", "Yên tĩnh", "Học tập nhiều", "Không hút thuốc", "Thích nấu ăn"], // Lối sống mong muốn
-    desiredInterests: ["Đọc sách", "Xem phim", "Nấu ăn"], // Sở thích
-  };
+  const userPreferences = useMemo(() => {
+    const safeUserLookingFor = userLookingFor || {};
+    return {
+      desiredBudget: (() => {
+        switch (safeUserLookingFor.budget) {
+          case 'under-2m': return 1500000;
+          case '2-3m': return 2500000;
+          case '3-4m': return 3500000;
+          case '4-5m': return 4500000;
+          case 'above-5m': return 5500000;
+          default: return null;
+        }
+      })(),
+      desiredLocation: safeUserLookingFor.location || '',
+      desiredGender: safeUserLookingFor.gender || '',
+      desiredLifestyle: safeUserLookingFor.lifestyle || [],
+      desiredInterests: userInterests || [],
+      desiredMajor: userMajor,
+      desiredYear: userYear,
+    };
+  }, [userLookingFor, userInterests, userMajor, userYear]);
 
   useEffect(() => {
+    console.log('Suggestions component received userLookingFor:', userLookingFor);
+    console.log('Suggestions component userPreferences:', userPreferences);
+    
+    // Always fetch suggestions regardless of criteria completeness
     fetchSuggestions();
-  }, [searchTerm, filters]);
+  }, [userLookingFor, userInterests, userMajor, userYear]);
 
   const fetchSuggestions = async () => {
     setLoading(true);
     
     try {
-      // Use posts data from db.json
-      const allPostsFromDb = db.posts;
+      const allPostsResponse = await fetch('http://localhost:3001/posts'); // Fetch from API
+      const allPostsFromDb = await allPostsResponse.json();
 
-      // Apply search and filters to db data
-      let filteredPosts = allPostsFromDb.filter(post => {
-        const matchesSearch = searchTerm ? post.title.toLowerCase().includes(searchTerm.toLowerCase()) : true;
-        const matchesCategory = filters.category ? post.category === filters.category : true;
-        const matchesMinPrice = filters.minPrice ? post.price >= filters.minPrice : true;
-        const matchesMaxPrice = filters.maxPrice ? post.price <= filters.maxPrice : true;
-        const matchesLocation = filters.location ? (post.location && post.location.toLowerCase().includes(filters.location.toLowerCase())) || (post.district && post.district.toLowerCase().includes(filters.location.toLowerCase())) : true;
-        const matchesGender = filters.genderPreference ? post.genderPreference === filters.genderPreference : true;
-        return matchesSearch && matchesCategory && matchesMinPrice && matchesMaxPrice && matchesLocation && matchesGender;
-      });
-
-      const allPosts = filteredPosts;
+      const allPosts = allPostsFromDb;
       
       // Calculate match scores based on user preferences
       const postsWithScores = allPosts.map(post => {
         let matchScore = 0;
-        
-        // Budget compatibility (25% weight)
+        let totalWeight = 0; // To normalize the score later
+        let primaryMatchCount = 0; // Counter for the new requirement
+
+        // Budget compatibility (Weight: 0.25)
+        let budgetScore = 0;
         if (post.price && userPreferences.desiredBudget) {
-          const budgetDiff = Math.abs(post.price - userPreferences.desiredBudget);
-          const budgetScore = Math.max(0, 100 - (budgetDiff / userPreferences.desiredBudget * 100));
-          matchScore += budgetScore * 0.25;
+            const priceDifference = Math.abs(post.price - userPreferences.desiredBudget);
+            // Assuming a max reasonable price difference for normalization, e.g., 5,000,000 VND
+            budgetScore = Math.max(0, 1 - (priceDifference / 5000000)); // Normalize to 0-1
+            if (budgetScore > 0) primaryMatchCount++;
         }
-        
-        // Location match (20% weight)
-        if (userPreferences.desiredLocation) {
-          const desiredLocationLower = userPreferences.desiredLocation.toLowerCase();
-          if (post.district && post.district.toLowerCase().includes(desiredLocationLower)) {
-            matchScore += 20;
-          } else if (post.location && post.location.toLowerCase().includes(desiredLocationLower)) {
-            matchScore += 10; // Slightly lower score if only city matches, not district
-          }
+        matchScore += budgetScore * 0.25;
+        totalWeight += 0.25;
+
+        // Location match (Weight: 0.25)
+        let locationScore = 0;
+        if (userPreferences.desiredLocation && (post.location || post.district)) {
+            const desiredLocationLower = userPreferences.desiredLocation.toLowerCase();
+            if (post.district && post.district.toLowerCase().includes(desiredLocationLower)) {
+                locationScore = 1; // Direct district match
+            } else if (post.location && post.location.toLowerCase().includes(desiredLocationLower)) {
+                locationScore = 0.5; // Broader location match
+            }
+            if (locationScore > 0) primaryMatchCount++;
         }
-        
-        // Gender compatibility (15% weight)
-        if (userPreferences.desiredGender === 'any') {
-          matchScore += 15;
-        } else if (post.genderPreference && (post.genderPreference === 'any' || post.genderPreference === userPreferences.desiredGender)) {
-          matchScore += 15;
+        matchScore += locationScore * 0.25;
+        totalWeight += 0.25;
+
+        // Gender compatibility (Weight: 0.15)
+        let genderScore = 0;
+        if (userPreferences.desiredGender) { // Check if a gender is desired
+            if (userPreferences.desiredGender === 'any' || (post.genderPreference && (post.genderPreference === 'any' || post.genderPreference === userPreferences.desiredGender))) {
+                genderScore = 1;
+            }
+            // Only count as a "primary match" if a specific gender was desired and matched
+            if (userPreferences.desiredGender !== 'any' && genderScore === 1) {
+                primaryMatchCount++;
+            }
+        } else { // If user doesn't specify gender, it's a non-factor or neutral match
+            genderScore = 0.5; // Neutral small weight if no preference
         }
-        
-        // Lifestyle compatibility (20% weight)
+        matchScore += genderScore * 0.15;
+        totalWeight += 0.15;
+
+        // Lifestyle compatibility (Weight: 0.15)
+        let lifestyleScore = 0;
         if (userPreferences.desiredLifestyle && userPreferences.desiredLifestyle.length > 0) {
-          let postAttributesForLifestyle = [];
-          if (post.lifestyle && Array.isArray(post.lifestyle)) {
-            postAttributesForLifestyle = post.lifestyle;
-          } else if (post.amenities && Array.isArray(post.amenities)) {
-            postAttributesForLifestyle = post.amenities.map(amenity => {
-              if (amenity.toLowerCase().includes('yên tĩnh') || amenity.toLowerCase().includes('máy lạnh')) return 'Yên tĩnh';
-              if (amenity.toLowerCase().includes('học tập nhiều') || amenity.toLowerCase().includes('wifi')) return 'Học tập nhiều';
-              if (amenity.toLowerCase().includes('thích nấu ăn') || amenity.toLowerCase().includes('bếp')) return 'Thích nấu ăn';
-              if (amenity.toLowerCase().includes('sạch sẽ')) return 'Sạch sẽ';
-              if (amenity.toLowerCase().includes('không hút thuốc')) return 'Không hút thuốc';
-              return null;
-            }).filter(Boolean);
-          }
+            let postAttributesForLifestyle = [];
+            // Map amenities/lifestyle from post to common lifestyle options
+            if (post.lifestyle && Array.isArray(post.lifestyle)) {
+                postAttributesForLifestyle = post.lifestyle;
+            } else if (post.amenities && Array.isArray(post.amenities)) {
+                postAttributesForLifestyle = post.amenities.map(amenity => {
+                    if (amenity.toLowerCase().includes('yên tĩnh')) return 'Yên tĩnh';
+                    if (amenity.toLowerCase().includes('sạch sẽ')) return 'Sạch sẽ';
+                    if (amenity.toLowerCase().includes('không hút thuốc')) return 'Không hút thuốc';
+                    if (amenity.toLowerCase().includes('học tập nhiều')) return 'Học tập nhiều';
+                    if (amenity.toLowerCase().includes('thích nấu ăn')) return 'Thích nấu ăn';
+                    return null;
+                }).filter(Boolean);
+            }
 
-          if (postAttributesForLifestyle.length > 0) {
-            const commonLifestyles = postAttributesForLifestyle.filter(attr => 
-              userPreferences.desiredLifestyle.includes(attr)
-            );
-            matchScore += (commonLifestyles.length / userPreferences.desiredLifestyle.length) * 20;
-          }
+            if (postAttributesForLifestyle.length > 0) {
+                const commonLifestyles = postAttributesForLifestyle.filter(attr =>
+                    userPreferences.desiredLifestyle.includes(attr)
+                );
+                lifestyleScore = commonLifestyles.length / userPreferences.desiredLifestyle.length; // Normalize to 0-1
+                if (lifestyleScore > 0) primaryMatchCount++;
+            }
         }
+        matchScore += lifestyleScore * 0.15;
+        totalWeight += 0.15;
 
-        // Interests overlap (20% weight)
+        // Interests overlap (Weight: 0.10)
+        let interestsScore = 0;
         if (post.interests && userPreferences.desiredInterests && userPreferences.desiredInterests.length > 0) {
-          const commonInterests = post.interests.filter(interest => 
-            userPreferences.desiredInterests.includes(interest)
-          );
-          matchScore += (commonInterests.length / userPreferences.desiredInterests.length) * 20;
+            const commonInterests = post.interests.filter(interest =>
+                userPreferences.desiredInterests.includes(interest)
+            );
+            interestsScore = commonInterests.length / userPreferences.desiredInterests.length; // Normalize to 0-1
         }
+        matchScore += interestsScore * 0.10;
+        totalWeight += 0.10;
+
+        // Major compatibility (Weight: 0.05)
+        let majorScore = 0;
+        if (userPreferences.desiredMajor && post.major) {
+            if (userPreferences.desiredMajor.toLowerCase() === post.major.toLowerCase()) {
+                majorScore = 1;
+            }
+        }
+        matchScore += majorScore * 0.05;
+        totalWeight += 0.05;
+
+        // Year compatibility (Weight: 0.05)
+        let yearScore = 0;
+        if (userPreferences.desiredYear && post.year) {
+            if (userPreferences.desiredYear === post.year) {
+                yearScore = 1;
+            }
+        }
+        matchScore += yearScore * 0.05;
+        totalWeight += 0.05;
+
+        // Normalize final matchScore to be out of 100
+        const finalMatchScore = (totalWeight > 0) ? (matchScore / totalWeight) * 100 : 0; // Avoid division by zero
         
         return {
           ...post,
-          matchScore: Math.min(100, Math.max(0, matchScore))
+          matchScore: Math.min(100, Math.max(0, finalMatchScore)),
+          primaryMatchCount: primaryMatchCount // Include the new counter
         };
       });
       
-      // Sort by match score and filter out low scores
+      // Sort by match score and filter based on new criteria
       const sortedSuggestions = postsWithScores
-        .filter(post => post.matchScore > 30)
+        .filter(post => post.primaryMatchCount >= 2 || post.matchScore > 30) // New filter condition
         .sort((a, b) => b.matchScore - a.matchScore);
       
       setSuggestions(sortedSuggestions);
@@ -152,14 +199,6 @@ function Suggestions() {
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const handleSearch = (term) => {
-    setSearchTerm(term);
-  };
-
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
   };
 
   const toggleFavorite = (postId) => {
@@ -196,262 +235,138 @@ function Suggestions() {
     return 'Có thể phù hợp';
   };
 
-  const filteredSuggestions = suggestions.filter(suggestion => {
-    if (filterType === 'all') return true;
-    if (filterType === 'high-match') return suggestion.matchScore >= 85;
-    if (filterType === 'budget-friendly') return suggestion.price <= userPreferences.desiredBudget;
-    if (filterType === 'nearby') return suggestion.location === userPreferences.desiredLocation;
-    return true;
-  });
+  const checkLookingForCriteriaComplete = () => {
+    // This function is no longer used to gate fetchSuggestions,
+    // but can be used for UI messaging.
+    if (!userLookingFor) {
+      return false;
+    }
+    const { desiredGender, desiredBudget, desiredLocation, desiredLifestyle } = userPreferences;
+    
+    // Consider criteria complete if at least one core preference is set.
+    // This allows partial preferences to still trigger suggestions.
+    const hasAnyCorePreference = 
+      (desiredGender && desiredGender !== '') ||
+      (desiredBudget !== null) ||
+      (desiredLocation && desiredLocation !== '') ||
+      (desiredLifestyle && desiredLifestyle.length > 0);
 
-  // Since currentUser and login are Firebase-related, we'll remove this block
-  // and assume the user is always "logged in" for the purpose of suggestions.
-  // if (!currentUser) {
-  //   return (
-  //     <div className="text-center py-12">
-  //       <Brain className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-  //       <h2 className="text-2xl font-bold text-gray-900 mb-2">Gợi ý AI</h2>
-  //       <p className="text-gray-600 mb-6">
-  //         Đăng nhập để nhận được gợi ý bạn ghép trọ phù hợp nhất
-  //       </p>
-  //       <Link 
-  //         to="/login" 
-  //         className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700"
-  //       >
-  //         Đăng nhập ngay
-  //       </Link>
-  //     </div>
-  //   );
-  // }
+    return hasAnyCorePreference;
+  };
 
+  const filteredSuggestions = suggestions; 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg p-8 mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold mb-2 flex items-center">
-              <Home className="mr-3" />
-              Gợi ý phòng trọ
-            </h1>
-          </div>
-          <button
-            onClick={refreshSuggestions}
-            disabled={refreshing}
-            className="flex items-center space-x-2 bg-white bg-opacity-20 px-4 py-2 rounded-lg hover:bg-opacity-30 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Làm mới</span>
-          </button>
-        </div>
+    <div className="py-6">
+      <div className="mb-6 flex justify-end">
+        <button
+          onClick={refreshSuggestions}
+          disabled={refreshing}
+          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span>Làm mới gợi ý</span>
+        </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Sidebar */}
-        <div className="lg:w-80">
-          <div className="bg-white rounded-lg shadow-lg p-6 sticky top-4">
-            <h2 className="text-xl font-semibold mb-6">Bộ lọc</h2>
-            
-            {/* SearchFilter Component */}
-            <div className="mb-6">
-              <SearchFilter 
-                onSearch={handleSearch}
-                onFilter={handleFilterChange}
-                initialFilters={filters}
-              />
-            </div>
-
-            {/* Filter Types */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Loại gợi ý
-              </label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tất cả gợi ý</option>
-                <option value="high-match">Phù hợp cao</option>
-                <option value="budget-friendly">Phù hợp ngân sách</option>
-                <option value="nearby">Gần đây</option>
-              </select>
-            </div>
-          </div>
+      {!checkLookingForCriteriaComplete() ? (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-md flex items-center space-x-2">
+          <Brain size={48} className="mx-auto" />
+          <p>
+            Vui lòng nhập đầy đủ thông tin vào phần "Tiêu chí tìm bạn" trong hồ sơ của bạn để nhận gợi ý.
+            <Link to="/profile" className="text-blue-700 hover:underline ml-1">Cập nhật hồ sơ</Link>
+          </p>
         </div>
-
-        {/* Main Content */}
-        <div className="flex-1">
-          {/* Results Header */}
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Gợi ý cho bạn
-                </h2>
-                <p className="text-gray-600 mt-1">
-                  Tìm thấy {filteredSuggestions.length} gợi ý phù hợp
-                </p>
+      ) : loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, index) => (
+            <div key={index} className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+              <div className="space-y-4">
+                <div className="h-48 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
               </div>
-              
-              {searchTerm && (
-                <div className="mt-4 sm:mt-0">
-                  <span className="text-sm text-gray-500">
-                    Từ khóa: <span className="font-medium text-blue-600">"{searchTerm}"</span>
+            </div>
+          ))}
+        </div>
+      ) : filteredSuggestions.length === 0 ? (
+        <div className="bg-white rounded-lg shadow-lg p-6 text-center">
+          <div className="text-gray-400 mb-4">
+            <Brain size={48} className="mx-auto" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">
+            Chưa có trọ phù hợp với bạn
+          </h3>
+          <p className="text-gray-600">
+            Thử cập nhật lại tiêu chí tìm bạn ghép trọ của bạn hoặc quay lại sau.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredSuggestions.map((suggestion) => (
+            <div key={suggestion.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+              <div className="relative">
+                <img
+                  src={suggestion.images?.[0] || '/placeholder-image.jpg'}
+                  alt={suggestion.title}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMatchScoreColor(suggestion.matchScore)}`}>
+                    {suggestion.matchScore.toFixed(0)}% {getMatchScoreLabel(suggestion.matchScore)}
                   </span>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Loading State */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, index) => (
-                <div key={index} className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
-                  <div className="space-y-4">
-                    <div className="h-48 bg-gray-200 rounded"></div>
-                    <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-full"></div>
-                    </div>
+                <div className="absolute top-3 right-3 flex space-x-2">
+                  <button
+                    onClick={() => toggleFavorite(suggestion.id)}
+                    className={`p-2 rounded-full ${
+                      favorites.includes(suggestion.id)
+                        ? 'bg-red-500 text-white'
+                        : 'bg-white text-gray-600 hover:text-red-500'
+                    } transition-colors`}
+                  >
+                    <Heart size={16} />
+                  </button>
+                  <div className="p-2 bg-white rounded-full text-gray-600">
+                    <Eye size={16} />
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : filteredSuggestions.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-              <div className="text-gray-400 mb-4">
-                <Brain size={64} className="mx-auto" />
               </div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">
-                Không tìm thấy gợi ý phù hợp
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Thử thay đổi bộ lọc hoặc cập nhật sở thích của bạn
-              </p>
-              <button
-                onClick={() => {
-                  setSearchTerm('');
-                  setFilters({});
-                  setFilterType('all');
-                }}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
-              >
-                Xóa bộ lọc
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredSuggestions.map((suggestion) => (
-                <div key={suggestion.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
-                  {/* Match Score Badge */}
-                  <div className="relative">
-                    <img
-                      src={suggestion.images?.[0] || '/placeholder-image.jpg'}
-                      alt={suggestion.title}
-                      className="w-full h-48 object-cover"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMatchScoreColor(suggestion.matchScore)}`}>
-                        {suggestion.matchScore}% {getMatchScoreLabel(suggestion.matchScore)}
-                      </span>
-                    </div>
-                    <div className="absolute top-3 right-3 flex space-x-2">
-                      <button
-                        onClick={() => toggleFavorite(suggestion.id)}
-                        className={`p-2 rounded-full ${
-                          favorites.includes(suggestion.id)
-                            ? 'bg-red-500 text-white'
-                            : 'bg-white text-gray-600 hover:text-red-500'
-                        } transition-colors`}
-                      >
-                        <Heart size={16} />
-                      </button>
-                      <div className="p-2 bg-white rounded-full text-gray-600">
-                        <Eye size={16} />
-                      </div>
-                    </div>
-                    {suggestion.hasVideo && (
-                      <div className="absolute bottom-3 left-3">
-                        <div className="bg-black bg-opacity-50 text-white px-2 py-1 rounded text-xs">
-                          Có video
-                        </div>
-                      </div>
-                    )}
+
+              <div className="p-4">
+                <h3 className="text-lg font-semibold text-gray-900 line-clamp-2 mb-2">
+                  <Link to={`/post/${suggestion.id}`} className="hover:text-blue-600">
+                    {suggestion.title}
+                  </Link>
+                </h3>
+                <div className="space-y-1 text-gray-600 text-sm">
+                  <div className="flex items-center">
+                    <MapPin size={14} className="mr-2" />
+                    <span>{suggestion.location || suggestion.address}</span>
                   </div>
-
-                  {/* Post Content */}
-                  <div className="p-6">
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                        <Link to={`/post/${suggestion.id}`} className="hover:text-blue-600">
-                          {suggestion.title}
-                        </Link>
-                      </h3>
-                      <div className="flex items-center space-x-1 text-yellow-400">
-                        <Star size={16} fill="currentColor" />
-                        <span className="text-sm text-gray-600">4.5</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 mb-4">
-                      <div className="flex items-center text-gray-600">
-                        <MapPin size={16} className="mr-2" />
-                        <span className="text-sm">{suggestion.location || suggestion.address}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <DollarSign size={16} className="mr-2" />
-                        <span className="text-sm font-semibold text-green-600">
-                          {formatPrice(suggestion.price || suggestion.budget)}/tháng
-                        </span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Users size={16} className="mr-2" />
-                        <span className="text-sm">{getGenderLabel(suggestion.genderPreference)}</span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <Calendar size={16} className="mr-2" />
-                        <span className="text-sm">{new Date(suggestion.createdAt).toLocaleDateString('vi-VN')}</span>
-                      </div>
-                    </div>
-
-                    {/* Amenities */}
-                    {suggestion.amenities && suggestion.amenities.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {suggestion.amenities.slice(0, 4).map((amenity, index) => (
-                          <span key={index} className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                            {amenity}
-                          </span>
-                        ))}
-                        {suggestion.amenities.length > 4 && (
-                          <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                            +{suggestion.amenities.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2">
-                      <Link
-                        to={`/post/${suggestion.id}`}
-                        className="flex-1 bg-blue-600 text-white text-center py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-                      >
-                        Xem chi tiết
-                      </Link>
-                      <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-                        <Heart size={16} />
-                      </button>
-                    </div>
+                  <div className="flex items-center">
+                    <DollarSign size={14} className="mr-2" />
+                    <span className="font-semibold text-green-600">
+                      {formatPrice(suggestion.price || suggestion.budget)}/tháng
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <Users size={14} className="mr-2" />
+                    <span>{getGenderLabel(suggestion.genderPreference)}</span>
                   </div>
                 </div>
-              ))}
+                <div className="mt-4">
+                  <Link
+                    to={`/post/${suggestion.id}`}
+                    className="block w-full bg-blue-600 text-white text-center py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Xem chi tiết
+                  </Link>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
-      </div>
+      )}
     </div>
   );
 }

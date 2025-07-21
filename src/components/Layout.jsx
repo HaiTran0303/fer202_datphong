@@ -71,10 +71,6 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
             <div className="flex items-center space-x-4">
               <span>Kênh thông tin Phòng Trọ số 1 Việt Nam</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <span>Hỗ trợ khách hàng</span>
-              <span className="font-semibold">0917 686 101</span>
-            </div>
           </div>
         </div>
       </div>
@@ -121,7 +117,7 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
                 to="/suggestions" 
                 className="text-gray-600 hover:text-gray-800 text-sm font-medium transition-colors"
               >
-                Gợi ý AI
+                Gợi ý phòng trọ
               </Link>
 
               <Link 
@@ -290,7 +286,7 @@ const Layout = ({ children, searchTermValue, onSearchSubmit }) => { // Added sea
               <div className="text-sm text-gray-600">
                 <p className="mb-1"><strong>Điện thoại:</strong> 0917 686 101</p>
                 <p className="mb-1"><strong>Email:</strong> support@fptro.com</p>
-                <p><strong>Địa chỉ:</strong> Khu đô thị FPT City, Ngũ Hành Sơn, Đà Nẵng, Việt Nam</p>
+                <p><strong>Địa chỉ:</strong> Khu công nghệ cao Láng - Hòa Lạc, Thạch Thất, Hà Nội, Việt Nam</p>
               </div>
             </div>
 
